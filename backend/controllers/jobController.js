@@ -8,7 +8,7 @@ exports.createJob = asyncHandler(async (req, res, next) => {
     return next(new AppError("Only shippers can post jobs", 403));
   }
 
-  const { title, description, pickupLocation, deliveryLocation, price } = req.body;
+  const { title, description, pickupLocation, deliveryLocation, price, requiredCapacity } = req.body;
 
   const job = await Job.create({
     title,
@@ -16,6 +16,7 @@ exports.createJob = asyncHandler(async (req, res, next) => {
     pickupLocation,
     deliveryLocation,
     price,
+    requiredCapacity: requiredCapacity ? Number(requiredCapacity) : 0,
     shipper: req.user._id,
   });
 

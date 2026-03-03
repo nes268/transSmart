@@ -22,6 +22,10 @@ const jobSchema = mongoose.Schema(
       type: Number,
       required: true
     },
+    requiredCapacity: {
+      type: Number,
+      default: 0
+    },
     status: {
       type: String,
       enum: ["open", "accepted", "completed"],

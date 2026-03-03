@@ -43,7 +43,7 @@ exports.createTrip = asyncHandler(async (req, res, next) => {
 
   // Notify shipper
   await sendNotification({
-    userId: job.createdBy || job.shipper,
+    userId: job.shipper,
     type: "job_accepted",
     message: "Your job has been accepted by a transporter.",
     relatedId: trip._id,
@@ -78,7 +78,7 @@ exports.updateTripStatus = asyncHandler(async (req, res, next) => {
     await truck.save();
 
     await sendNotification({
-      userId: trip.job.createdBy || trip.job.shipper,
+      userId: trip.job.shipper,
       type: "job_completed",
       message: "Your delivery has been completed.",
       relatedId: trip._id,
@@ -115,7 +115,7 @@ exports.updateLiveLocation = asyncHandler(async (req, res) => {
 });
 
 /**
- * Get My Trips
+ * Get My Trips (Transporter)
  */
 exports.getMyTrips = asyncHandler(async (req, res) => {
   const trips = await Trip.find({ transporter: req.user._id })
@@ -126,5 +126,53 @@ exports.getMyTrips = asyncHandler(async (req, res) => {
     success: true,
     count: trips.length,
     data: trips,
+  });
+});
+
+/**
+ * Get Shipper Trips (trips for jobs created by shipper)
+ */
+exports.getShipperTrips = asyncHandler(async (req, res, next) => {
+  if (req.user.role !== "shipper") {
+    return next(new AppError("Only shippers can access this", 403));
+  }
+
+  const trips = await Trip.find({})
+    .populate("job")
+    .populate("truck")
+    .populate("transporter", "name email");
+
+  const shipperTrips = trips.filter((t) => t.job && t.job.shipper && t.job.shipper.toString() === req.user._id.toString());
+
+  res.status(200).json({
+    success: true,
+    count: shipperTrips.length,
+    data: shipperTrips,
+  });
+});
+
+/**
+ * Get Single Trip (Transporter or Shipper with access)
+ */
+exports.getTripById = asyncHandler(async (req, res, next) => {
+  const trip = await Trip.findById(req.params.id)
+    .populate("job")
+    .populate("truck")
+    .populate("transporter", "name email");
+
+  if (!trip) return next(new AppError("Trip not found", 404));
+
+  const transporterId = trip.transporter._id?.toString?.() || trip.transporter.toString();
+  const shipperId = trip.job?.shipper?._id?.toString?.() || trip.job?.shipper?.toString?.();
+  const isTransporter = transporterId === req.user._id.toString();
+  const isShipper = shipperId === req.user._id.toString();
+
+  if (!isTransporter && !isShipper) {
+    return next(new AppError("Not authorized to view this trip", 403));
+  }
+
+  res.status(200).json({
+    success: true,
+    data: trip,
   });
 });
