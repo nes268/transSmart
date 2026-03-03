@@ -19,6 +19,10 @@ const userSchema = mongoose.Schema(
       type: String,
       enum: ["shipper", "transporter", "admin"],
       default: "shipper"
+    },
+    isBlocked: {
+      type: Boolean,
+      default: false,
     }
   },
   { timestamps: true }
