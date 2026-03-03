@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { getAllJobsAdmin, deleteJob } from "../services/adminService";
 import Loader from "../components/common/Loader";
+import { Package, Trash2 } from "lucide-react";
 
 export default function AdminJobs() {
   const [jobs, setJobs] = useState([]);
@@ -26,29 +27,44 @@ export default function AdminJobs() {
   if (loading) return <Loader />;
 
   return (
-    <div>
-      <h1 style={{ marginBottom: "1.5rem" }}>All Jobs</h1>
+    <div className="animate-in">
+      <div className="page-header">
+        <h1 className="page-title">All Jobs</h1>
+      </div>
 
       {jobs.length === 0 ? (
-        <div className="card" style={{ textAlign: "center", color: "var(--color-text-muted)" }}>No jobs</div>
+        <div className="card">
+          <div className="empty-state">
+            <Package size={32} className="empty-state-icon" />
+            <p className="empty-state-text">No jobs</p>
+          </div>
+        </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+        <div className="list-stack">
           {jobs.map((j) => (
-            <div key={j._id} className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
-              <div>
-                <div style={{ fontWeight: 600 }}>{j.title}</div>
-                <div style={{ fontSize: "0.875rem", color: "var(--color-text-muted)" }}>
-                  {j.pickupLocation} → {j.deliveryLocation}
+            <div key={j._id} className="card card-hover">
+              <div className="list-item">
+                <div>
+                  <div className="list-item-title">{j.title}</div>
+                  <div className="list-item-sub">
+                    {j.pickupLocation} → {j.deliveryLocation}
+                  </div>
+                  <span
+                    className={`badge badge-${j.status}`}
+                    style={{ marginTop: "0.25rem", display: "inline-block" }}
+                  >
+                    {j.status}
+                  </span>
                 </div>
-                <span className={`badge badge-${j.status}`} style={{ marginTop: "0.25rem", display: "inline-block" }}>
-                  {j.status}
-                </span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <span style={{ fontWeight: 600, color: "var(--color-primary)" }}>₹{j.price}</span>
-                <button className="btn btn-danger" style={{ fontSize: "0.8125rem" }} onClick={() => handleDelete(j._id)}>
-                  Delete
-                </button>
+                <div className="list-item-actions">
+                  <span className="list-item-price">₹{j.price}</span>
+                  <button
+                    className="btn btn-danger btn-sm"
+                    onClick={() => handleDelete(j._id)}
+                  >
+                    <Trash2 size={14} /> Delete
+                  </button>
+                </div>
               </div>
             </div>
           ))}

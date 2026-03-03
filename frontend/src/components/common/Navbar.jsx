@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
+import { Truck, Bell, LogOut } from "lucide-react";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -10,51 +11,37 @@ export default function Navbar() {
     navigate("/login");
   };
 
+  const initials = user?.name
+    ? user.name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2)
+    : "?";
+
   return (
-    <nav
-      style={{
-        background: "var(--color-surface)",
-        borderBottom: "1px solid var(--color-border)",
-        padding: "0.75rem 1.5rem",
-      }}
-    >
-      <div
-        className="container"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <Link
-          to="/"
-          style={{
-            fontSize: "1.25rem",
-            fontWeight: 700,
-            color: "var(--color-primary)",
-          }}
-        >
-          TransSmart
+    <nav className="navbar">
+      <div className="navbar-inner">
+        <Link to="/" className="navbar-brand">
+          <div className="navbar-brand-icon">
+            <Truck size={18} />
+          </div>
+          <span className="navbar-brand-text">TransSmart</span>
         </Link>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
+        <div className="navbar-actions">
           {user && (
             <>
-              <span style={{ color: "var(--color-text-muted)", fontSize: "0.875rem" }}>
-                {user.name} ({user.role})
-              </span>
-              <Link
-                to="/notifications"
-                style={{ color: "var(--color-text-muted)", fontSize: "0.875rem" }}
-              >
-                Notifications
+              <Link to="/notifications" className="navbar-icon-btn" title="Notifications">
+                <Bell size={16} />
               </Link>
-              <button
-                onClick={handleLogout}
-                className="btn btn-secondary"
-                style={{ padding: "0.5rem 1rem", fontSize: "0.875rem" }}
-              >
-                Logout
+
+              <div className="navbar-user">
+                <div className="navbar-user-info">
+                  <div className="navbar-user-name">{user.name}</div>
+                  <div className="navbar-user-role">{user.role}</div>
+                </div>
+                <div className="navbar-avatar">{initials}</div>
+              </div>
+
+              <button onClick={handleLogout} className="navbar-icon-btn" title="Logout">
+                <LogOut size={16} />
               </button>
             </>
           )}

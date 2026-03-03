@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { smartMatch, optimizeRoute } from "../services/aiService";
 import { getAllJobs } from "../services/jobService";
 import Loader from "../components/common/Loader";
+import { Sparkles, MapPin, Zap } from "lucide-react";
 
 export default function AI() {
   const [jobs, setJobs] = useState([]);
@@ -37,7 +38,10 @@ export default function AI() {
       const res = await smartMatch(matchJobId);
       setMatchResult(res.suggestion);
     } catch (err) {
-      setError(err.response?.data?.message || "Smart match failed. AI engine may not be configured.");
+      setError(
+        err.response?.data?.message ||
+          "Smart match failed. AI engine may not be configured."
+      );
     } finally {
       setMatchLoading(false);
     }
@@ -57,7 +61,10 @@ export default function AI() {
       );
       setRouteResult(res.optimization);
     } catch (err) {
-      setError(err.response?.data?.message || "Route optimization failed. AI engine may not be configured.");
+      setError(
+        err.response?.data?.message ||
+          "Route optimization failed. AI engine may not be configured."
+      );
     } finally {
       setRouteLoading(false);
     }
@@ -66,54 +73,106 @@ export default function AI() {
   if (loading) return <Loader />;
 
   return (
-    <div>
-      <h1 style={{ marginBottom: "1.5rem" }}>AI Tools</h1>
+    <div className="animate-in">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">AI Tools</h1>
+          <p className="page-subtitle">Smart match and route optimization</p>
+        </div>
+      </div>
 
-      <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem" }}>
+      <div className="tab-group" style={{ marginBottom: "1.5rem" }}>
         <button
-          className={`btn ${activeTab === "match" ? "btn-primary" : "btn-secondary"}`}
-          onClick={() => { setActiveTab("match"); setError(""); setMatchResult(null); }}
+          className={`tab-btn${activeTab === "match" ? " active" : ""}`}
+          onClick={() => {
+            setActiveTab("match");
+            setError("");
+            setMatchResult(null);
+          }}
         >
-          Smart Match
+          <Sparkles size={14} /> Smart Match
         </button>
         <button
-          className={`btn ${activeTab === "route" ? "btn-primary" : "btn-secondary"}`}
-          onClick={() => { setActiveTab("route"); setError(""); setRouteResult(null); }}
+          className={`tab-btn${activeTab === "route" ? " active" : ""}`}
+          onClick={() => {
+            setActiveTab("route");
+            setError("");
+            setRouteResult(null);
+          }}
         >
-          Optimize Route
+          <MapPin size={14} /> Optimize Route
         </button>
       </div>
 
-      {error && (
-        <div style={{ padding: "0.75rem", background: "rgba(239,68,68,0.2)", color: "var(--color-error)", borderRadius: "var(--radius)", marginBottom: "1rem" }}>
-          {error}
-        </div>
-      )}
+      {error && <div className="alert alert-error">{error}</div>}
 
       {activeTab === "match" && (
         <div className="card">
-          <h2 style={{ marginBottom: "1rem" }}>Smart Match</h2>
-          <p style={{ color: "var(--color-text-muted)", marginBottom: "1rem", fontSize: "0.875rem" }}>
+          <div className="section-header" style={{ marginBottom: "0.75rem" }}>
+            <h2 className="section-title">Smart Match</h2>
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: "var(--radius-sm)",
+                background: "var(--color-primary-light)",
+                color: "var(--color-primary)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Sparkles size={18} />
+            </div>
+          </div>
+          <p style={{ color: "var(--color-text-muted)", fontSize: "0.875rem", marginBottom: "1rem" }}>
             Get AI-powered transporter suggestions for a job
           </p>
           <form onSubmit={handleSmartMatch}>
             <div className="form-group">
               <label>Select Job</label>
-              <select value={matchJobId} onChange={(e) => setMatchJobId(e.target.value)} required>
+              <select
+                value={matchJobId}
+                onChange={(e) => setMatchJobId(e.target.value)}
+                required
+              >
                 <option value="">Choose a job...</option>
                 {jobs.map((j) => (
-                  <option key={j._id} value={j._id}>{j.title} - ₹{j.price}</option>
+                  <option key={j._id} value={j._id}>
+                    {j.title} - ₹{j.price}
+                  </option>
                 ))}
               </select>
             </div>
-            <button type="submit" className="btn btn-primary" disabled={matchLoading || jobs.length === 0}>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={matchLoading || jobs.length === 0}
+            >
               {matchLoading ? "Finding match..." : "Get Suggestions"}
             </button>
           </form>
           {matchResult && (
-            <div style={{ marginTop: "1.5rem", padding: "1rem", background: "var(--color-bg)", borderRadius: "var(--radius)" }}>
-              <h3 style={{ marginBottom: "0.5rem" }}>Result</h3>
-              <pre style={{ whiteSpace: "pre-wrap", fontSize: "0.875rem" }}>{JSON.stringify(matchResult, null, 2)}</pre>
+            <div
+              style={{
+                marginTop: "1.5rem",
+                padding: "1rem",
+                background: "rgba(255,255,255,0.03)",
+                borderRadius: "var(--radius)",
+                border: "1px solid var(--color-border)",
+              }}
+            >
+              <h3 style={{ marginBottom: "0.5rem", fontSize: "0.875rem", fontWeight: 600 }}>Result</h3>
+              <pre
+                style={{
+                  whiteSpace: "pre-wrap",
+                  fontSize: "0.8125rem",
+                  color: "var(--color-text-secondary)",
+                  fontFamily: "var(--font-mono)",
+                }}
+              >
+                {JSON.stringify(matchResult, null, 2)}
+              </pre>
             </div>
           )}
         </div>
@@ -121,55 +180,107 @@ export default function AI() {
 
       {activeTab === "route" && (
         <div className="card">
-          <h2 style={{ marginBottom: "1rem" }}>Optimize Route</h2>
-          <p style={{ color: "var(--color-text-muted)", marginBottom: "1rem", fontSize: "0.875rem" }}>
+          <div className="section-header" style={{ marginBottom: "0.75rem" }}>
+            <h2 className="section-title">Optimize Route</h2>
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: "var(--radius-sm)",
+                background: "var(--color-accent-light)",
+                color: "var(--color-accent)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Zap size={18} />
+            </div>
+          </div>
+          <p style={{ color: "var(--color-text-muted)", fontSize: "0.875rem", marginBottom: "1rem" }}>
             Get fuel-efficient route suggestions
           </p>
           <form onSubmit={handleOptimizeRoute}>
-            <div className="form-group">
-              <label>Pickup Location</label>
-              <input
-                value={routeForm.pickup}
-                onChange={(e) => setRouteForm({ ...routeForm, pickup: e.target.value })}
-                placeholder="e.g. Chennai"
-                required
-              />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+              <div className="form-group">
+                <label>Pickup Location</label>
+                <input
+                  value={routeForm.pickup}
+                  onChange={(e) =>
+                    setRouteForm({ ...routeForm, pickup: e.target.value })
+                  }
+                  placeholder="e.g. Chennai"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Drop Location</label>
+                <input
+                  value={routeForm.drop}
+                  onChange={(e) =>
+                    setRouteForm({ ...routeForm, drop: e.target.value })
+                  }
+                  placeholder="e.g. Bangalore"
+                  required
+                />
+              </div>
             </div>
-            <div className="form-group">
-              <label>Drop Location</label>
-              <input
-                value={routeForm.drop}
-                onChange={(e) => setRouteForm({ ...routeForm, drop: e.target.value })}
-                placeholder="e.g. Bangalore"
-                required
-              />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+              <div className="form-group">
+                <label>Fuel Type</label>
+                <select
+                  value={routeForm.fuelType}
+                  onChange={(e) =>
+                    setRouteForm({ ...routeForm, fuelType: e.target.value })
+                  }
+                >
+                  <option value="diesel">Diesel</option>
+                  <option value="petrol">Petrol</option>
+                  <option value="electric">Electric</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Fuel Efficiency (km/L)</label>
+                <input
+                  type="number"
+                  value={routeForm.fuelEfficiency}
+                  onChange={(e) =>
+                    setRouteForm({ ...routeForm, fuelEfficiency: e.target.value })
+                  }
+                  min="0.1"
+                  step="0.1"
+                />
+              </div>
             </div>
-            <div className="form-group">
-              <label>Fuel Type</label>
-              <select value={routeForm.fuelType} onChange={(e) => setRouteForm({ ...routeForm, fuelType: e.target.value })}>
-                <option value="diesel">Diesel</option>
-                <option value="petrol">Petrol</option>
-                <option value="electric">Electric</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Fuel Efficiency (km/L)</label>
-              <input
-                type="number"
-                value={routeForm.fuelEfficiency}
-                onChange={(e) => setRouteForm({ ...routeForm, fuelEfficiency: e.target.value })}
-                min="0.1"
-                step="0.1"
-              />
-            </div>
-            <button type="submit" className="btn btn-primary" disabled={routeLoading}>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={routeLoading}
+            >
               {routeLoading ? "Optimizing..." : "Optimize"}
             </button>
           </form>
           {routeResult && (
-            <div style={{ marginTop: "1.5rem", padding: "1rem", background: "var(--color-bg)", borderRadius: "var(--radius)" }}>
-              <h3 style={{ marginBottom: "0.5rem" }}>Result</h3>
-              <pre style={{ whiteSpace: "pre-wrap", fontSize: "0.875rem" }}>{JSON.stringify(routeResult, null, 2)}</pre>
+            <div
+              style={{
+                marginTop: "1.5rem",
+                padding: "1rem",
+                background: "rgba(255,255,255,0.03)",
+                borderRadius: "var(--radius)",
+                border: "1px solid var(--color-border)",
+              }}
+            >
+              <h3 style={{ marginBottom: "0.5rem", fontSize: "0.875rem", fontWeight: 600 }}>Result</h3>
+              <pre
+                style={{
+                  whiteSpace: "pre-wrap",
+                  fontSize: "0.8125rem",
+                  color: "var(--color-text-secondary)",
+                  fontFamily: "var(--font-mono)",
+                }}
+              >
+                {JSON.stringify(routeResult, null, 2)}
+              </pre>
             </div>
           )}
         </div>

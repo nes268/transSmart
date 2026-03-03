@@ -4,6 +4,7 @@ import { getShipperDashboard } from "../services/dashboardService";
 import { useAuth } from "../hooks/useAuth";
 import { formatDate } from "../utils/formatDate";
 import Loader from "../components/common/Loader";
+import { CreditCard, PlusCircle, IndianRupee } from "lucide-react";
 
 export default function PaymentHistory() {
   const { user } = useAuth();
@@ -22,15 +23,15 @@ export default function PaymentHistory() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => {
-    load();
-  }, []);
+  useEffect(() => load(), []);
 
   useEffect(() => {
     if (user?.role === "shipper") {
       getShipperDashboard()
         .then((res) => {
-          const completed = (res.data?.jobs || []).filter((j) => j.status === "completed");
+          const completed = (res.data?.jobs || []).filter(
+            (j) => j.status === "completed"
+          );
           setJobsNeedingPayment(completed);
         })
         .catch(() => setJobsNeedingPayment([]));
@@ -65,30 +66,41 @@ export default function PaymentHistory() {
 
   if (loading) return <Loader />;
 
-  const pendingPayments = payments.filter((p) => p.status === "pending");
   const paidJobIds = payments.map((p) => p.job?._id);
-  const jobsWithoutPayment = jobsNeedingPayment.filter((j) => !paidJobIds.includes(j._id));
+  const jobsWithoutPayment = jobsNeedingPayment.filter(
+    (j) => !paidJobIds.includes(j._id)
+  );
 
   return (
-    <div>
-      <h1 style={{ marginBottom: "1.5rem" }}>Payment History</h1>
+    <div className="animate-in">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Payment History</h1>
+          <p className="page-subtitle">Track and manage your payments</p>
+        </div>
+      </div>
 
       {user?.role === "shipper" && jobsWithoutPayment.length > 0 && (
         <div className="card" style={{ marginBottom: "1.5rem" }}>
-          <h3 style={{ marginBottom: "0.75rem" }}>Create Payment</h3>
-          <p style={{ color: "var(--color-text-muted)", fontSize: "0.875rem", marginBottom: "1rem" }}>
+          <div className="section-header" style={{ marginBottom: "0.75rem" }}>
+            <h3 className="section-title">Create Payment</h3>
+          </div>
+          <p style={{ color: "var(--color-text-muted)", fontSize: "0.8125rem", marginBottom: "1rem" }}>
             Create payment for completed jobs
           </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+          <div className="list-stack">
             {jobsWithoutPayment.map((j) => (
-              <div key={j._id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.5rem 0" }}>
-                <span>{j.title} - ₹{j.price}</span>
+              <div key={j._id} className="list-item" style={{ padding: "0.5rem 0" }}>
+                <div>
+                  <span className="list-item-title">{j.title}</span>
+                  <span className="list-item-price" style={{ marginLeft: "0.75rem" }}>₹{j.price}</span>
+                </div>
                 <button
-                  className="btn btn-primary"
-                  style={{ fontSize: "0.8125rem" }}
+                  className="btn btn-primary btn-sm"
                   disabled={createLoading === j._id}
                   onClick={() => handleCreatePayment(j._id)}
                 >
+                  <PlusCircle size={14} />
                   {createLoading === j._id ? "Creating..." : "Create Payment"}
                 </button>
               </div>
@@ -98,32 +110,41 @@ export default function PaymentHistory() {
       )}
 
       {payments.length === 0 ? (
-        <div className="card" style={{ textAlign: "center", color: "var(--color-text-muted)" }}>
-          No payments yet.
+        <div className="card">
+          <div className="empty-state">
+            <CreditCard size={32} className="empty-state-icon" />
+            <p className="empty-state-text">No payments yet.</p>
+          </div>
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+        <div className="list-stack">
           {payments.map((p) => (
-            <div key={p._id} className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
-              <div>
-                <div style={{ fontWeight: 600 }}>₹{p.amount}</div>
-                <div style={{ fontSize: "0.875rem", color: "var(--color-text-muted)" }}>
-                  Job: {p.job?.title || p.job?._id || "-"}
+            <div key={p._id} className="card card-hover">
+              <div className="list-item">
+                <div>
+                  <div className="list-item-title" style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+                    <IndianRupee size={16} style={{ color: "var(--color-primary)" }} />
+                    ₹{p.amount}
+                  </div>
+                  <div className="list-item-sub">
+                    Job: {p.job?.title || p.job?._id || "-"}
+                  </div>
+                  <div className="list-item-meta">{formatDate(p.createdAt)}</div>
                 </div>
-                <div style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>{formatDate(p.createdAt)}</div>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <span className={`badge badge-${p.status === "paid" ? "completed" : "accepted"}`}>{p.status}</span>
-                {p.status === "pending" && user?.role === "shipper" && (
-                  <button
-                    className="btn btn-primary"
-                    style={{ fontSize: "0.8125rem" }}
-                    disabled={actionLoading === p._id}
-                    onClick={() => setShowMarkPaid(p._id)}
-                  >
-                    Mark Paid
-                  </button>
-                )}
+                <div className="list-item-actions">
+                  <span className={`badge badge-${p.status === "paid" ? "completed" : "accepted"}`}>
+                    {p.status}
+                  </span>
+                  {p.status === "pending" && user?.role === "shipper" && (
+                    <button
+                      className="btn btn-primary btn-sm"
+                      disabled={actionLoading === p._id}
+                      onClick={() => setShowMarkPaid(p._id)}
+                    >
+                      Mark Paid
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ))}
@@ -131,20 +152,9 @@ export default function PaymentHistory() {
       )}
 
       {showMarkPaid && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.6)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 100,
-          }}
-          onClick={() => setShowMarkPaid(null)}
-        >
-          <div className="card" style={{ maxWidth: "360px", width: "90%" }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginBottom: "1rem" }}>Mark as Paid</h3>
+        <div className="modal-overlay" onClick={() => setShowMarkPaid(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title">Mark as Paid</h3>
             <div className="form-group">
               <label>Payment Method</label>
               <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
@@ -158,7 +168,9 @@ export default function PaymentHistory() {
               <button className="btn btn-primary" disabled={actionLoading} onClick={handleMarkPaid}>
                 {actionLoading ? "Updating..." : "Confirm"}
               </button>
-              <button className="btn btn-secondary" onClick={() => setShowMarkPaid(null)}>Cancel</button>
+              <button className="btn btn-secondary" onClick={() => setShowMarkPaid(null)}>
+                Cancel
+              </button>
             </div>
           </div>
         </div>

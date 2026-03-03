@@ -3,17 +3,18 @@ import { Link } from "react-router-dom";
 import { getTransporterDashboard } from "../services/dashboardService";
 import { formatDate } from "../utils/formatDate";
 import Loader from "../components/common/Loader";
-
-const statCard = (label, value, color) => (
-  <div
-    key={label}
-    className="card"
-    style={{ flex: 1, minWidth: "140px", borderLeft: `4px solid ${color}` }}
-  >
-    <div style={{ color: "var(--color-text-muted)", fontSize: "0.875rem", marginBottom: "0.25rem" }}>{label}</div>
-    <div style={{ fontSize: "1.5rem", fontWeight: 700 }}>{value}</div>
-  </div>
-);
+import {
+  Package,
+  Loader2,
+  CheckCircle2,
+  Search,
+  Truck,
+  MapPin,
+  CreditCard,
+  Bell,
+  Star,
+  ArrowRight,
+} from "lucide-react";
 
 export default function TransporterDashboard() {
   const [data, setData] = useState(null);
@@ -23,70 +24,106 @@ export default function TransporterDashboard() {
   useEffect(() => {
     getTransporterDashboard()
       .then((res) => setData(res.data))
-      .catch((err) => setError(err.response?.data?.message || "Failed to load dashboard"))
+      .catch((err) =>
+        setError(err.response?.data?.message || "Failed to load dashboard")
+      )
       .finally(() => setLoading(false));
   }, []);
 
   if (loading) return <Loader />;
-  if (error) return <div style={{ color: "var(--color-error)" }}>{error}</div>;
+  if (error) return <div className="alert alert-error">{error}</div>;
 
   const { stats, jobs } = data;
 
   return (
-    <div>
-      <h1 style={{ marginBottom: "1.5rem" }}>Transporter Dashboard</h1>
-
-      <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginBottom: "2rem" }}>
-        {statCard("Total Accepted", stats.totalAccepted, "var(--color-primary)")}
-        {statCard("Active", stats.activeJobs, "var(--color-warning)")}
-        {statCard("Completed", stats.completedJobs, "var(--color-success)")}
-      </div>
-
-      <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginBottom: "1.5rem" }}>
-        <Link to="/transporter/jobs" className="btn btn-secondary">Browse Jobs</Link>
-        <Link to="/transporter/trucks" className="btn btn-secondary">My Trucks</Link>
-        <Link to="/transporter/trips" className="btn btn-secondary">My Trips</Link>
-        <Link to="/payments" className="btn btn-secondary">Earnings</Link>
-        <Link to="/notifications" className="btn btn-secondary">Notifications</Link>
-        <Link to="/reviews" className="btn btn-secondary">Reviews</Link>
-      </div>
-
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-        <h2 style={{ fontSize: "1.125rem" }}>My Jobs</h2>
-        <Link to="/transporter/jobs" className="btn btn-secondary">
+    <div className="animate-in">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Dashboard</h1>
+          <p className="page-subtitle">Your transport activity at a glance</p>
+        </div>
+        <Link to="/transporter/jobs" className="btn btn-primary">
+          <Search size={16} />
           Browse Jobs
         </Link>
       </div>
 
+      <div className="stat-grid" style={{ marginBottom: "2rem" }}>
+        <div className="stat-card stat-card-purple">
+          <div className="stat-card-header">
+            <span className="stat-card-label">Total Accepted</span>
+            <div className="stat-card-icon"><Package size={18} /></div>
+          </div>
+          <div className="stat-card-value">{stats.totalAccepted}</div>
+        </div>
+        <div className="stat-card stat-card-amber">
+          <div className="stat-card-header">
+            <span className="stat-card-label">Active</span>
+            <div className="stat-card-icon amber"><Loader2 size={18} /></div>
+          </div>
+          <div className="stat-card-value">{stats.activeJobs}</div>
+        </div>
+        <div className="stat-card stat-card-green">
+          <div className="stat-card-header">
+            <span className="stat-card-label">Completed</span>
+            <div className="stat-card-icon green"><CheckCircle2 size={18} /></div>
+          </div>
+          <div className="stat-card-value">{stats.completedJobs}</div>
+        </div>
+      </div>
+
+      <div className="quick-actions" style={{ marginBottom: "2rem" }}>
+        <Link to="/transporter/trucks" className="btn btn-secondary btn-sm">
+          <Truck size={14} /> My Trucks
+        </Link>
+        <Link to="/transporter/trips" className="btn btn-secondary btn-sm">
+          <MapPin size={14} /> My Trips
+        </Link>
+        <Link to="/payments" className="btn btn-secondary btn-sm">
+          <CreditCard size={14} /> Earnings
+        </Link>
+        <Link to="/notifications" className="btn btn-secondary btn-sm">
+          <Bell size={14} /> Notifications
+        </Link>
+        <Link to="/reviews" className="btn btn-secondary btn-sm">
+          <Star size={14} /> Reviews
+        </Link>
+      </div>
+
+      <div className="section-header">
+        <h2 className="section-title">My Jobs</h2>
+        <Link to="/transporter/jobs" className="btn btn-ghost btn-sm">
+          Browse all <ArrowRight size={14} />
+        </Link>
+      </div>
+
       {jobs.length === 0 ? (
-        <div className="card" style={{ textAlign: "center", color: "var(--color-text-muted)" }}>
-          <p>No jobs accepted yet. Browse open jobs to get started.</p>
-          <Link to="/transporter/jobs" className="btn btn-primary" style={{ marginTop: "1rem" }}>
-            Browse Jobs
-          </Link>
+        <div className="card">
+          <div className="empty-state">
+            <Package size={32} className="empty-state-icon" />
+            <p className="empty-state-text">
+              No jobs accepted yet. Browse open jobs to get started.
+            </p>
+            <Link to="/transporter/jobs" className="btn btn-primary" style={{ marginTop: "0.5rem" }}>
+              <Search size={16} /> Browse Jobs
+            </Link>
+          </div>
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+        <div className="list-stack">
           {jobs.map((job) => (
-            <Link
-              key={job._id}
-              to={`/jobs/${job._id}`}
-              className="card"
-              style={{ textDecoration: "none", color: "inherit" }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap" }}>
+            <Link key={job._id} to={`/jobs/${job._id}`} className="card card-hover card-interactive">
+              <div className="list-item">
                 <div>
-                  <div style={{ fontWeight: 600 }}>{job.title}</div>
-                  <div style={{ fontSize: "0.875rem", color: "var(--color-text-muted)" }}>
+                  <div className="list-item-title">{job.title}</div>
+                  <div className="list-item-sub">
                     {job.pickupLocation} → {job.deliveryLocation}
                   </div>
-                  <div style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", marginTop: "0.25rem" }}>
-                    {formatDate(job.updatedAt)}
-                  </div>
+                  <div className="list-item-meta">{formatDate(job.updatedAt)}</div>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <div className="list-item-actions">
                   <span className={`badge badge-${job.status}`}>{job.status}</span>
-                  <span style={{ fontWeight: 600, color: "var(--color-primary)" }}>₹{job.price}</span>
+                  <span className="list-item-price">₹{job.price}</span>
                 </div>
               </div>
             </Link>

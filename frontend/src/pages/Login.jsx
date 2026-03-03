@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { login as loginApi } from "../services/authService";
 import { useAuth } from "../hooks/useAuth";
+import { Truck } from "lucide-react";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -11,7 +12,6 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = location.state?.from?.pathname || "/";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -23,7 +23,14 @@ export default function Login() {
         { _id: data._id, name: data.name, email: data.email, role: data.role },
         data.token
       );
-      const redirect = data.role === "shipper" ? "/shipper/dashboard" : data.role === "transporter" ? "/transporter/dashboard" : data.role === "admin" ? "/admin/dashboard" : "/";
+      const redirect =
+        data.role === "shipper"
+          ? "/shipper/dashboard"
+          : data.role === "transporter"
+          ? "/transporter/dashboard"
+          : data.role === "admin"
+          ? "/admin/dashboard"
+          : "/";
       navigate(redirect, { replace: true });
     } catch (err) {
       setError(err.response?.data?.message || "Login failed. Please try again.");
@@ -33,34 +40,17 @@ export default function Login() {
   };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "linear-gradient(135deg, var(--color-bg) 0%, var(--color-surface) 100%)",
-      }}
-    >
-      <div className="card" style={{ width: "100%", maxWidth: "400px" }}>
-        <h1 style={{ marginBottom: "0.5rem", fontSize: "1.5rem" }}>Welcome back</h1>
-        <p style={{ color: "var(--color-text-muted)", marginBottom: "1.5rem" }}>
-          Sign in to TransSmart
-        </p>
-
-        {error && (
-          <div
-            style={{
-              padding: "0.75rem",
-              background: "rgba(239, 68, 68, 0.2)",
-              color: "var(--color-error)",
-              borderRadius: "var(--radius)",
-              marginBottom: "1rem",
-            }}
-          >
-            {error}
+    <div className="auth-page">
+      <div className="auth-card animate-in">
+        <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
+          <div className="landing-logo" style={{ margin: "0 auto 1rem", width: 44, height: 44 }}>
+            <Truck size={22} />
           </div>
-        )}
+          <h1 className="auth-title">Welcome back</h1>
+          <p className="auth-subtitle">Sign in to your TransSmart account</p>
+        </div>
+
+        {error && <div className="alert alert-error">{error}</div>}
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
@@ -79,17 +69,22 @@ export default function Login() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder="Enter your password"
               required
             />
           </div>
-          <button type="submit" className="btn btn-primary" style={{ width: "100%", marginTop: "0.5rem" }} disabled={loading}>
+          <button
+            type="submit"
+            className="btn btn-primary"
+            style={{ width: "100%", marginTop: "0.5rem" }}
+            disabled={loading}
+          >
             {loading ? "Signing in..." : "Sign in"}
           </button>
         </form>
 
-        <p style={{ marginTop: "1rem", color: "var(--color-text-muted)", fontSize: "0.875rem" }}>
-          Don't have an account? <Link to="/register">Register</Link>
+        <p className="auth-footer">
+          Don't have an account? <Link to="/register">Create one</Link>
         </p>
       </div>
     </div>

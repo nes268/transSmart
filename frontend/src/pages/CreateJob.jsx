@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createJob } from "../services/jobService";
+import { ArrowLeft } from "lucide-react";
 
 export default function CreateJob() {
   const [title, setTitle] = useState("");
@@ -27,7 +28,10 @@ export default function CreateJob() {
       });
       navigate("/shipper");
     } catch (err) {
-      const msg = err.response?.data?.message || err.response?.data?.errors?.[0]?.msg || "Failed to create job.";
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data?.errors?.[0]?.msg ||
+        "Failed to create job.";
       setError(msg);
     } finally {
       setLoading(false);
@@ -35,23 +39,20 @@ export default function CreateJob() {
   };
 
   return (
-    <div>
-      <h1 style={{ marginBottom: "1.5rem" }}>Create New Job</h1>
+    <div className="animate-in">
+      <button onClick={() => navigate(-1)} className="back-link" style={{ background: "none", border: "none", cursor: "pointer" }}>
+        <ArrowLeft size={16} /> Back
+      </button>
 
-      <div className="card" style={{ maxWidth: "600px" }}>
-        {error && (
-          <div
-            style={{
-              padding: "0.75rem",
-              background: "rgba(239, 68, 68, 0.2)",
-              color: "var(--color-error)",
-              borderRadius: "var(--radius)",
-              marginBottom: "1rem",
-            }}
-          >
-            {error}
-          </div>
-        )}
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Create New Job</h1>
+          <p className="page-subtitle">Fill in the details for your shipment</p>
+        </div>
+      </div>
+
+      <div className="card" style={{ maxWidth: "640px" }}>
+        {error && <div className="alert alert-error">{error}</div>}
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
@@ -69,55 +70,59 @@ export default function CreateJob() {
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe the shipment..."
+              placeholder="Describe the shipment details..."
               rows={3}
               required
             />
           </div>
-          <div className="form-group">
-            <label>Pickup Location</label>
-            <input
-              type="text"
-              value={pickupLocation}
-              onChange={(e) => setPickupLocation(e.target.value)}
-              placeholder="Address or city"
-              required
-            />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+            <div className="form-group">
+              <label>Pickup Location</label>
+              <input
+                type="text"
+                value={pickupLocation}
+                onChange={(e) => setPickupLocation(e.target.value)}
+                placeholder="Address or city"
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>Drop Location</label>
+              <input
+                type="text"
+                value={deliveryLocation}
+                onChange={(e) => setDeliveryLocation(e.target.value)}
+                placeholder="Address or city"
+                required
+              />
+            </div>
           </div>
-          <div className="form-group">
-            <label>Drop Location</label>
-            <input
-              type="text"
-              value={deliveryLocation}
-              onChange={(e) => setDeliveryLocation(e.target.value)}
-              placeholder="Address or city"
-              required
-            />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+            <div className="form-group">
+              <label>Required Capacity (tons)</label>
+              <input
+                type="number"
+                value={requiredCapacity}
+                onChange={(e) => setRequiredCapacity(e.target.value)}
+                placeholder="0"
+                min="0"
+                step="0.1"
+              />
+            </div>
+            <div className="form-group">
+              <label>Budget (₹)</label>
+              <input
+                type="number"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                placeholder="0"
+                min="1"
+                step="0.01"
+                required
+              />
+            </div>
           </div>
-          <div className="form-group">
-            <label>Required Capacity (tons)</label>
-            <input
-              type="number"
-              value={requiredCapacity}
-              onChange={(e) => setRequiredCapacity(e.target.value)}
-              placeholder="0"
-              min="0"
-              step="0.1"
-            />
-          </div>
-          <div className="form-group">
-            <label>Budget (₹)</label>
-            <input
-              type="number"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              placeholder="0"
-              min="1"
-              step="0.01"
-              required
-            />
-          </div>
-          <div style={{ display: "flex", gap: "0.75rem", marginTop: "1rem" }}>
+          <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.5rem" }}>
             <button type="submit" className="btn btn-primary" disabled={loading}>
               {loading ? "Creating..." : "Create Job"}
             </button>

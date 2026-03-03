@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { getShipperDashboard } from "../services/dashboardService";
 import { formatDate } from "../utils/formatDate";
 import Loader from "../components/common/Loader";
+import { PlusCircle, Package } from "lucide-react";
 
 export default function ShipperJobs() {
   const [data, setData] = useState(null);
@@ -19,40 +20,36 @@ export default function ShipperJobs() {
   const { jobs } = data;
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
-        <h1>My Jobs</h1>
+    <div className="animate-in">
+      <div className="page-header">
+        <h1 className="page-title">My Jobs</h1>
         <Link to="/shipper/jobs/new" className="btn btn-primary">
-          Create Job
+          <PlusCircle size={16} /> Create Job
         </Link>
       </div>
 
       {jobs.length === 0 ? (
-        <div className="card" style={{ textAlign: "center", color: "var(--color-text-muted)" }}>
-          No jobs yet. Create your first job to get started.
+        <div className="card">
+          <div className="empty-state">
+            <Package size={32} className="empty-state-icon" />
+            <p className="empty-state-text">No jobs yet. Create your first job to get started.</p>
+          </div>
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+        <div className="list-stack">
           {jobs.map((job) => (
-            <Link
-              key={job._id}
-              to={`/jobs/${job._id}`}
-              className="card"
-              style={{ textDecoration: "none", color: "inherit" }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap" }}>
+            <Link key={job._id} to={`/jobs/${job._id}`} className="card card-hover card-interactive">
+              <div className="list-item">
                 <div>
-                  <div style={{ fontWeight: 600 }}>{job.title}</div>
-                  <div style={{ fontSize: "0.875rem", color: "var(--color-text-muted)" }}>
+                  <div className="list-item-title">{job.title}</div>
+                  <div className="list-item-sub">
                     {job.pickupLocation} → {job.deliveryLocation}
                   </div>
-                  <div style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", marginTop: "0.25rem" }}>
-                    {formatDate(job.createdAt)}
-                  </div>
+                  <div className="list-item-meta">{formatDate(job.createdAt)}</div>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <div className="list-item-actions">
                   <span className={`badge badge-${job.status}`}>{job.status}</span>
-                  <span style={{ fontWeight: 600, color: "var(--color-primary)" }}>₹{job.price}</span>
+                  <span className="list-item-price">₹{job.price}</span>
                 </div>
               </div>
             </Link>

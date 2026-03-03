@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { register as registerApi } from "../services/authService";
 import { useAuth } from "../hooks/useAuth";
+import { Truck } from "lucide-react";
 
 export default function Register() {
   const [name, setName] = useState("");
@@ -26,7 +27,10 @@ export default function Register() {
       const redirect = role === "shipper" ? "/shipper" : "/transporter";
       navigate(redirect, { replace: true });
     } catch (err) {
-      const msg = err.response?.data?.message || err.response?.data?.errors?.[0]?.msg || "Registration failed.";
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data?.errors?.[0]?.msg ||
+        "Registration failed.";
       setError(msg);
     } finally {
       setLoading(false);
@@ -34,43 +38,26 @@ export default function Register() {
   };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "linear-gradient(135deg, var(--color-bg) 0%, var(--color-surface) 100%)",
-      }}
-    >
-      <div className="card" style={{ width: "100%", maxWidth: "400px" }}>
-        <h1 style={{ marginBottom: "0.5rem", fontSize: "1.5rem" }}>Create account</h1>
-        <p style={{ color: "var(--color-text-muted)", marginBottom: "1.5rem" }}>
-          Join TransSmart today
-        </p>
-
-        {error && (
-          <div
-            style={{
-              padding: "0.75rem",
-              background: "rgba(239, 68, 68, 0.2)",
-              color: "var(--color-error)",
-              borderRadius: "var(--radius)",
-              marginBottom: "1rem",
-            }}
-          >
-            {error}
+    <div className="auth-page">
+      <div className="auth-card animate-in">
+        <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
+          <div className="landing-logo" style={{ margin: "0 auto 1rem", width: 44, height: 44 }}>
+            <Truck size={22} />
           </div>
-        )}
+          <h1 className="auth-title">Create account</h1>
+          <p className="auth-subtitle">Join TransSmart today</p>
+        </div>
+
+        {error && <div className="alert alert-error">{error}</div>}
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Name</label>
+            <label>Full Name</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Your name"
+              placeholder="Your full name"
               required
             />
           </div>
@@ -90,7 +77,7 @@ export default function Register() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder="Create a strong password"
               minLength={6}
               required
             />
@@ -102,12 +89,17 @@ export default function Register() {
               <option value="transporter">Transporter</option>
             </select>
           </div>
-          <button type="submit" className="btn btn-primary" style={{ width: "100%", marginTop: "0.5rem" }} disabled={loading}>
-            {loading ? "Creating account..." : "Register"}
+          <button
+            type="submit"
+            className="btn btn-primary"
+            style={{ width: "100%", marginTop: "0.5rem" }}
+            disabled={loading}
+          >
+            {loading ? "Creating account..." : "Create Account"}
           </button>
         </form>
 
-        <p style={{ marginTop: "1rem", color: "var(--color-text-muted)", fontSize: "0.875rem" }}>
+        <p className="auth-footer">
           Already have an account? <Link to="/login">Sign in</Link>
         </p>
       </div>
