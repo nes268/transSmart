@@ -5,10 +5,9 @@ export const smartMatch = async (jobId) => {
   return res.data;
 };
 
-export const optimizeRoute = async (pickup, drop, fuelType, fuelEfficiency) => {
+export const optimizeRoute = async (jobId, fuelType = "diesel", fuelEfficiency = 5) => {
   const res = await api.post("/ai/optimize-route", {
-    pickup,
-    drop,
+    jobId,
     fuelType,
     fuelEfficiency,
   });

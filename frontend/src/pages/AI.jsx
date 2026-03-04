@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
 import { smartMatch, optimizeRoute } from "../services/aiService";
 import { getAllJobs } from "../services/jobService";
+import { useSocket } from "../context/SocketContext";
 import Loader from "../components/common/Loader";
+import RouteMap from "../components/maps/RouteMap";
 import { Sparkles, MapPin, Zap } from "lucide-react";
 
 export default function AI() {
+  const socket = useSocket();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("match");
@@ -12,8 +15,7 @@ export default function AI() {
   const [matchResult, setMatchResult] = useState(null);
   const [matchLoading, setMatchLoading] = useState(false);
   const [routeForm, setRouteForm] = useState({
-    pickup: "",
-    drop: "",
+    jobId: "",
     fuelType: "diesel",
     fuelEfficiency: "5",
   });
@@ -27,6 +29,30 @@ export default function AI() {
       .catch(() => setJobs([]))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!socket?.connected || !routeForm.jobId) return;
+    socket.emit("joinJobRoom", routeForm.jobId);
+  }, [socket?.connected, routeForm.jobId]);
+
+  useEffect(() => {
+    if (!socket?.connected) return;
+    const handler = ({ jobId, optimizedRoute }) => {
+      if (jobId === routeForm.jobId) {
+        setRouteResult({
+          distance_km: optimizedRoute.distance,
+          duration_minutes: Math.round(optimizedRoute.duration / 60),
+          fuel_used_liters: optimizedRoute.fuelUsed,
+          fuel_cost: optimizedRoute.fuelCost,
+          greenScore: optimizedRoute.greenScore,
+          steps: optimizedRoute.steps,
+          geometry: optimizedRoute.geometry,
+        });
+      }
+    };
+    socket.on("job:optimizedRoute", handler);
+    return () => socket.off("job:optimizedRoute", handler);
+  }, [socket?.connected, routeForm.jobId]);
 
   const handleSmartMatch = async (e) => {
     e.preventDefault();
@@ -49,21 +75,21 @@ export default function AI() {
 
   const handleOptimizeRoute = async (e) => {
     e.preventDefault();
+    if (!routeForm.jobId) return;
     setError("");
     setRouteLoading(true);
     setRouteResult(null);
     try {
       const res = await optimizeRoute(
-        routeForm.pickup,
-        routeForm.drop,
+        routeForm.jobId,
         routeForm.fuelType,
-        parseFloat(routeForm.fuelEfficiency)
+        parseFloat(routeForm.fuelEfficiency) || 5
       );
       setRouteResult(res.optimization);
     } catch (err) {
       setError(
         err.response?.data?.message ||
-          "Route optimization failed. AI engine may not be configured."
+          "Route optimization failed. Check pickup/delivery locations are valid."
       );
     } finally {
       setRouteLoading(false);
@@ -198,32 +224,23 @@ export default function AI() {
             </div>
           </div>
           <p style={{ color: "var(--color-text-muted)", fontSize: "0.875rem", marginBottom: "1rem" }}>
-            Get fuel-efficient route suggestions
+            Get optimized route for a job. The route is saved and shown to the transporter who accepts it.
           </p>
           <form onSubmit={handleOptimizeRoute}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-              <div className="form-group">
-                <label>Pickup Location</label>
-                <input
-                  value={routeForm.pickup}
-                  onChange={(e) =>
-                    setRouteForm({ ...routeForm, pickup: e.target.value })
-                  }
-                  placeholder="e.g. Chennai"
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Drop Location</label>
-                <input
-                  value={routeForm.drop}
-                  onChange={(e) =>
-                    setRouteForm({ ...routeForm, drop: e.target.value })
-                  }
-                  placeholder="e.g. Bangalore"
-                  required
-                />
-              </div>
+            <div className="form-group">
+              <label>Select Job</label>
+              <select
+                value={routeForm.jobId}
+                onChange={(e) => setRouteForm({ ...routeForm, jobId: e.target.value })}
+                required
+              >
+                <option value="">Choose a job...</option>
+                {jobs.map((j) => (
+                  <option key={j._id} value={j._id}>
+                    {j.title} — {j.pickupLocation} → {j.deliveryLocation}
+                  </option>
+                ))}
+              </select>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
               <div className="form-group">
@@ -255,9 +272,9 @@ export default function AI() {
             <button
               type="submit"
               className="btn btn-primary"
-              disabled={routeLoading}
+              disabled={routeLoading || jobs.length === 0}
             >
-              {routeLoading ? "Optimizing..." : "Optimize"}
+              {routeLoading ? "Optimizing route..." : "Optimize Route"}
             </button>
           </form>
           {routeResult && (
@@ -270,17 +287,38 @@ export default function AI() {
                 border: "1px solid var(--color-border)",
               }}
             >
-              <h3 style={{ marginBottom: "0.5rem", fontSize: "0.875rem", fontWeight: 600 }}>Result</h3>
-              <pre
-                style={{
-                  whiteSpace: "pre-wrap",
-                  fontSize: "0.8125rem",
-                  color: "var(--color-text-secondary)",
-                  fontFamily: "var(--font-mono)",
-                }}
-              >
-                {JSON.stringify(routeResult, null, 2)}
-              </pre>
+              <h3 style={{ marginBottom: "0.75rem", fontSize: "0.9375rem", fontWeight: 600 }}>
+                Optimized Route
+              </h3>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.5rem", marginBottom: "1rem" }}>
+                <div style={{ padding: "0.5rem", background: "var(--color-surface)", borderRadius: "var(--radius-sm)" }}>
+                  <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>Distance</span>
+                  <div style={{ fontWeight: 600 }}>{routeResult.distance_km} km</div>
+                </div>
+                <div style={{ padding: "0.5rem", background: "var(--color-surface)", borderRadius: "var(--radius-sm)" }}>
+                  <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>Est. Time</span>
+                  <div style={{ fontWeight: 600 }}>~{routeResult.duration_minutes} min</div>
+                </div>
+                <div style={{ padding: "0.5rem", background: "var(--color-surface)", borderRadius: "var(--radius-sm)" }}>
+                  <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>Est. Fuel Cost</span>
+                  <div style={{ fontWeight: 600 }}>₹{routeResult.fuel_cost}</div>
+                </div>
+                <div style={{ padding: "0.5rem", background: "var(--color-surface)", borderRadius: "var(--radius-sm)" }}>
+                  <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>Green Score</span>
+                  <div style={{ fontWeight: 600, color: "var(--color-success)" }}>{routeResult.greenScore}/100</div>
+                </div>
+              </div>
+              {routeResult.geometry ? (
+                <RouteMap
+                  geometry={routeResult.geometry}
+                  pickupLocation={jobs.find((j) => j._id === routeForm.jobId)?.pickupLocation}
+                  deliveryLocation={jobs.find((j) => j._id === routeForm.jobId)?.deliveryLocation}
+                />
+              ) : (
+                <div style={{ height: "200px", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--color-surface)", borderRadius: "var(--radius)", color: "var(--color-text-muted)" }}>
+                  Map loading...
+                </div>
+              )}
             </div>
           )}
         </div>

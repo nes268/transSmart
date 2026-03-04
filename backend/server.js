@@ -60,6 +60,11 @@ io.on("connection", (socket) => {
     console.log(`Socket joined trip ${tripId}`);
   });
 
+  // Join job room (for real-time optimized route updates)
+  socket.on("joinJobRoom", (jobId) => {
+    if (jobId) socket.join(`job:${jobId}`);
+  });
+
   // Join personal user room for notifications
   socket.on("joinUserRoom", (userId) => {
     socket.join(userId);

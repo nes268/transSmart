@@ -40,6 +40,15 @@ const jobSchema = mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       default: null
+    },
+    optimizedRoute: {
+      distance: { type: Number },
+      duration: { type: Number },
+      fuelUsed: { type: Number },
+      fuelCost: { type: Number },
+      greenScore: { type: Number },
+      steps: [{ instruction: String, distance: Number, duration: Number }],
+      geometry: { type: mongoose.Schema.Types.Mixed }
     }
   },
   { timestamps: true }

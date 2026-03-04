@@ -3,13 +3,15 @@ import { io } from "socket.io-client";
 
 const SocketContext = createContext(null);
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "";
+const SOCKET_URL =
+  import.meta.env.VITE_SOCKET_URL ||
+  (import.meta.env.DEV ? "http://localhost:5000" : window.location.origin);
 
 export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
 
   useEffect(() => {
-    const s = io(SOCKET_URL || window.location.origin, {
+    const s = io(SOCKET_URL, {
       path: "/socket.io",
       transports: ["websocket", "polling"],
     });

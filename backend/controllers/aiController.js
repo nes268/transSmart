@@ -59,37 +59,69 @@ exports.smartMatch = async (req, res, next) => {
   }
 };
 
+const { optimizeRoute: optimizeRouteUtil } = require("../utils/routeOptimizer");
+
 exports.optimizeRoute = async (req, res, next) => {
   try {
-    const input = {
-      pickup: req.body.pickup,
-      drop: req.body.drop,
-      fuelType: req.body.fuelType,
-      fuelEfficiency: req.body.fuelEfficiency
+    const { jobId, fuelType = "diesel", fuelEfficiency = 5 } = req.body;
+
+    if (!jobId) {
+      return res.status(400).json({ message: "Job ID is required" });
+    }
+
+    const job = await Job.findById(jobId);
+    if (!job) {
+      return res.status(404).json({ message: "Job not found" });
+    }
+
+    const pickup = job.pickupLocation || "";
+    const drop = job.deliveryLocation || "";
+    if (!pickup || !drop) {
+      return res.status(400).json({ message: "Job must have pickup and delivery locations" });
+    }
+
+    const optimization = await optimizeRouteUtil(
+      pickup,
+      drop,
+      fuelType,
+      parseFloat(fuelEfficiency) || 5
+    );
+
+    job.optimizedRoute = {
+      distance: optimization.distance,
+      duration: optimization.duration,
+      fuelUsed: optimization.fuelUsed,
+      fuelCost: optimization.fuelCost,
+      greenScore: optimization.greenScore,
+      steps: optimization.steps,
+      geometry: optimization.geometry
     };
+    await job.save();
 
-    const pythonProcess = spawn("python", [
-      "ai-engine/route_optimizer.py"
-    ]);
+    const payload = {
+      jobId: job._id.toString(),
+      optimizedRoute: job.optimizedRoute
+    };
+    if (global.io) {
+      global.io.to(`job:${job._id}`).emit("job:optimizedRoute", payload);
+      if (job.transporter) {
+        global.io.to(job.transporter.toString()).emit("job:optimizedRoute", payload);
+      }
+      global.io.to(job.shipper.toString()).emit("job:optimizedRoute", payload);
+    }
 
-    let result = "";
-
-    pythonProcess.stdin.write(JSON.stringify(input));
-    pythonProcess.stdin.end();
-
-    pythonProcess.stdout.on("data", data => {
-      result += data.toString();
+    res.status(200).json({
+      success: true,
+      optimization: {
+        distance_km: optimization.distance,
+        duration_minutes: Math.round(optimization.duration / 60),
+        fuel_used_liters: optimization.fuelUsed,
+        fuel_cost: optimization.fuelCost,
+        greenScore: optimization.greenScore,
+        steps: optimization.steps,
+        geometry: optimization.geometry
+      }
     });
-
-    pythonProcess.stdout.on("end", () => {
-      const optimization = JSON.parse(result);
-
-      res.status(200).json({
-        success: true,
-        optimization
-      });
-    });
-
   } catch (err) {
     next(err);
   }
