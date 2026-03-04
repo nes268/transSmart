@@ -1,26 +1,21 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
 import { smartMatch, optimizeRoute } from "../services/aiService";
 import { getAllJobs } from "../services/jobService";
-import { createTruckRequest } from "../services/truckRequestService";
-import { useAuth } from "../hooks/useAuth";
+import { useSocket } from "../context/SocketContext";
 import Loader from "../components/common/Loader";
-import { Sparkles, MapPin, Zap, Truck, User, Phone, Send } from "lucide-react";
+import RouteMap from "../components/maps/RouteMap";
+import { Sparkles, MapPin, Zap } from "lucide-react";
 
 export default function AI() {
-  const { user } = useAuth();
+  const socket = useSocket();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("match");
   const [matchJobId, setMatchJobId] = useState("");
   const [matchResult, setMatchResult] = useState(null);
   const [matchLoading, setMatchLoading] = useState(false);
-  const [requestModal, setRequestModal] = useState(null);
-  const [requestMessage, setRequestMessage] = useState("");
-  const [requestLoading, setRequestLoading] = useState(false);
   const [routeForm, setRouteForm] = useState({
-    pickup: "",
-    drop: "",
+    jobId: "",
     fuelType: "diesel",
     fuelEfficiency: "5",
   });
@@ -29,17 +24,35 @@ export default function AI() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (user?.role === "transporter") setActiveTab("route");
-  }, [user?.role]);
-
-  useEffect(() => {
-    const params = { status: "open" };
-    if (user?.role === "shipper") params.mine = true;
-    getAllJobs(params)
+    getAllJobs({ status: "open" })
       .then((res) => setJobs(res.data || []))
       .catch(() => setJobs([]))
       .finally(() => setLoading(false));
-  }, [user?.role]);
+  }, []);
+
+  useEffect(() => {
+    if (!socket?.connected || !routeForm.jobId) return;
+    socket.emit("joinJobRoom", routeForm.jobId);
+  }, [socket?.connected, routeForm.jobId]);
+
+  useEffect(() => {
+    if (!socket?.connected) return;
+    const handler = ({ jobId, optimizedRoute }) => {
+      if (jobId === routeForm.jobId) {
+        setRouteResult({
+          distance_km: optimizedRoute.distance,
+          duration_minutes: Math.round(optimizedRoute.duration / 60),
+          fuel_used_liters: optimizedRoute.fuelUsed,
+          fuel_cost: optimizedRoute.fuelCost,
+          greenScore: optimizedRoute.greenScore,
+          steps: optimizedRoute.steps,
+          geometry: optimizedRoute.geometry,
+        });
+      }
+    };
+    socket.on("job:optimizedRoute", handler);
+    return () => socket.off("job:optimizedRoute", handler);
+  }, [socket?.connected, routeForm.jobId]);
 
   const handleSmartMatch = async (e) => {
     e.preventDefault();
@@ -49,7 +62,7 @@ export default function AI() {
     setMatchResult(null);
     try {
       const res = await smartMatch(matchJobId);
-      setMatchResult(res);
+      setMatchResult(res.suggestion);
     } catch (err) {
       setError(
         err.response?.data?.message ||
@@ -60,38 +73,23 @@ export default function AI() {
     }
   };
 
-  const handleSendRequest = async (e) => {
-    e.preventDefault();
-    if (!requestModal) return;
-    setRequestLoading(true);
-    setError("");
-    try {
-      await createTruckRequest(requestModal.truck._id, requestMessage);
-      setRequestModal(null);
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to send request");
-    } finally {
-      setRequestLoading(false);
-    }
-  };
-
   const handleOptimizeRoute = async (e) => {
     e.preventDefault();
+    if (!routeForm.jobId) return;
     setError("");
     setRouteLoading(true);
     setRouteResult(null);
     try {
       const res = await optimizeRoute(
-        routeForm.pickup,
-        routeForm.drop,
+        routeForm.jobId,
         routeForm.fuelType,
-        parseFloat(routeForm.fuelEfficiency)
+        parseFloat(routeForm.fuelEfficiency) || 5
       );
       setRouteResult(res.optimization);
     } catch (err) {
       setError(
         err.response?.data?.message ||
-          "Route optimization failed. AI engine may not be configured."
+          "Route optimization failed. Check pickup/delivery locations are valid."
       );
     } finally {
       setRouteLoading(false);
@@ -110,18 +108,16 @@ export default function AI() {
       </div>
 
       <div className="tab-group" style={{ marginBottom: "1.5rem" }}>
-        {user?.role === "shipper" && (
-          <button
-            className={`tab-btn${activeTab === "match" ? " active" : ""}`}
-            onClick={() => {
-              setActiveTab("match");
-              setError("");
-              setMatchResult(null);
-            }}
-          >
-            <Sparkles size={14} /> Smart Match
-          </button>
-        )}
+        <button
+          className={`tab-btn${activeTab === "match" ? " active" : ""}`}
+          onClick={() => {
+            setActiveTab("match");
+            setError("");
+            setMatchResult(null);
+          }}
+        >
+          <Sparkles size={14} /> Smart Match
+        </button>
         <button
           className={`tab-btn${activeTab === "route" ? " active" : ""}`}
           onClick={() => {
@@ -183,112 +179,26 @@ export default function AI() {
             </button>
           </form>
           {matchResult && (
-            <div style={{ marginTop: "1.5rem" }}>
-              <p style={{ color: "var(--color-text-muted)", fontSize: "0.875rem", marginBottom: "1rem" }}>
-                {matchResult.message} ({matchResult.totalTrucksScanned} truck profiles scanned)
-              </p>
-              {matchResult.suggestions?.length > 0 ? (
-                <div className="list-stack">
-                  {matchResult.suggestions.map((s, idx) => (
-                    <div key={s.truck._id} className="card card-hover">
-                      <div className="list-item">
-                        <div style={{ flex: 1 }}>
-                          <div className="list-item-title" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                            <span className="badge badge-open" style={{ minWidth: 28 }}>#{idx + 1}</span>
-                            <Truck size={16} style={{ color: "var(--color-primary)" }} />
-                            {s.truck.truckNumber}
-                          </div>
-                          <div className="list-item-sub">
-                            {s.truck.capacity} tons • {s.truck.fuelType?.charAt(0).toUpperCase() + (s.truck.fuelType?.slice(1) || "")} •{" "}
-                            <span className={`badge badge-${s.truck.availability === "available" ? "completed" : "accepted"}`} style={{ fontSize: "0.7rem" }}>
-                              {s.truck.availability}
-                            </span>
-                          </div>
-                          {s.truck.transporter && (
-                            <div className="list-item-meta" style={{ marginTop: "0.25rem" }}>
-                              <User size={12} style={{ display: "inline", verticalAlign: "middle", marginRight: "4px" }} />
-                              {s.truck.transporter.name}
-                              {s.truck.transporter.phone && (
-                                <> • <Phone size={12} style={{ display: "inline", verticalAlign: "middle" }} /> {s.truck.transporter.phone}</>
-                              )}
-                              {s.truck.transporter.email && (
-                                <> • {s.truck.transporter.email}</>
-                              )}
-                            </div>
-                          )}
-                          <div style={{ marginTop: "0.375rem", fontSize: "0.75rem", color: "var(--color-text-muted)" }}>
-                            Match score: {s.score} — {s.reasons?.join(" • ")}
-                          </div>
-                        </div>
-                        <div className="list-item-actions" style={{ flexDirection: "column", gap: "0.5rem", alignItems: "flex-end" }}>
-                          <button
-                            className="btn btn-primary btn-sm"
-                            onClick={() => {
-                              setRequestModal(s);
-                              setRequestMessage("");
-                              setError("");
-                            }}
-                          >
-                            <Send size={14} /> Send Request
-                          </button>
-                          {s.truck.transporter?._id && (
-                            <Link
-                              to={`/reviews/user/${s.truck.transporter._id}`}
-                              className="btn btn-secondary btn-sm"
-                            >
-                              View Reviews
-                            </Link>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div
-                  style={{
-                    padding: "1.5rem",
-                    background: "rgba(255,255,255,0.03)",
-                    borderRadius: "var(--radius)",
-                    border: "1px solid var(--color-border)",
-                    color: "var(--color-text-muted)",
-                    textAlign: "center",
-                  }}
-                >
-                  No suitable trucks found for this job.
-                </div>
-              )}
-            </div>
-          )}
-
-          {requestModal && (
-            <div className="modal-overlay" style={{ marginTop: 0 }} onClick={() => setRequestModal(null)}>
-              <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                <h3 className="modal-title">Send Request</h3>
-                <p style={{ color: "var(--color-text-muted)", marginBottom: "1rem", fontSize: "0.875rem" }}>
-                  Request truck <strong>{requestModal.truck?.truckNumber}</strong> from {requestModal.truck?.transporter?.name}
-                </p>
-                <form onSubmit={handleSendRequest}>
-                  <div className="form-group">
-                    <label>Message (optional)</label>
-                    <textarea
-                      value={requestMessage}
-                      onChange={(e) => setRequestMessage(e.target.value)}
-                      placeholder="Add a note for the transporter..."
-                      rows={3}
-                      style={{ resize: "vertical" }}
-                    />
-                  </div>
-                  <div style={{ display: "flex", gap: "0.5rem" }}>
-                    <button type="submit" className="btn btn-primary" disabled={requestLoading}>
-                      {requestLoading ? "Sending..." : "Send Request"}
-                    </button>
-                    <button type="button" className="btn btn-secondary" onClick={() => setRequestModal(null)}>
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              </div>
+            <div
+              style={{
+                marginTop: "1.5rem",
+                padding: "1rem",
+                background: "rgba(255,255,255,0.03)",
+                borderRadius: "var(--radius)",
+                border: "1px solid var(--color-border)",
+              }}
+            >
+              <h3 style={{ marginBottom: "0.5rem", fontSize: "0.875rem", fontWeight: 600 }}>Result</h3>
+              <pre
+                style={{
+                  whiteSpace: "pre-wrap",
+                  fontSize: "0.8125rem",
+                  color: "var(--color-text-secondary)",
+                  fontFamily: "var(--font-mono)",
+                }}
+              >
+                {JSON.stringify(matchResult, null, 2)}
+              </pre>
             </div>
           )}
         </div>
@@ -314,32 +224,23 @@ export default function AI() {
             </div>
           </div>
           <p style={{ color: "var(--color-text-muted)", fontSize: "0.875rem", marginBottom: "1rem" }}>
-            Get fuel-efficient route suggestions
+            Get optimized route for a job. The route is saved and shown to the transporter who accepts it.
           </p>
           <form onSubmit={handleOptimizeRoute}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-              <div className="form-group">
-                <label>Pickup Location</label>
-                <input
-                  value={routeForm.pickup}
-                  onChange={(e) =>
-                    setRouteForm({ ...routeForm, pickup: e.target.value })
-                  }
-                  placeholder="e.g. Chennai"
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Drop Location</label>
-                <input
-                  value={routeForm.drop}
-                  onChange={(e) =>
-                    setRouteForm({ ...routeForm, drop: e.target.value })
-                  }
-                  placeholder="e.g. Bangalore"
-                  required
-                />
-              </div>
+            <div className="form-group">
+              <label>Select Job</label>
+              <select
+                value={routeForm.jobId}
+                onChange={(e) => setRouteForm({ ...routeForm, jobId: e.target.value })}
+                required
+              >
+                <option value="">Choose a job...</option>
+                {jobs.map((j) => (
+                  <option key={j._id} value={j._id}>
+                    {j.title} — {j.pickupLocation} → {j.deliveryLocation}
+                  </option>
+                ))}
+              </select>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
               <div className="form-group">
@@ -371,9 +272,9 @@ export default function AI() {
             <button
               type="submit"
               className="btn btn-primary"
-              disabled={routeLoading}
+              disabled={routeLoading || jobs.length === 0}
             >
-              {routeLoading ? "Optimizing..." : "Optimize"}
+              {routeLoading ? "Optimizing route..." : "Optimize Route"}
             </button>
           </form>
           {routeResult && (
@@ -386,17 +287,38 @@ export default function AI() {
                 border: "1px solid var(--color-border)",
               }}
             >
-              <h3 style={{ marginBottom: "0.5rem", fontSize: "0.875rem", fontWeight: 600 }}>Result</h3>
-              <pre
-                style={{
-                  whiteSpace: "pre-wrap",
-                  fontSize: "0.8125rem",
-                  color: "var(--color-text-secondary)",
-                  fontFamily: "var(--font-mono)",
-                }}
-              >
-                {JSON.stringify(routeResult, null, 2)}
-              </pre>
+              <h3 style={{ marginBottom: "0.75rem", fontSize: "0.9375rem", fontWeight: 600 }}>
+                Optimized Route
+              </h3>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.5rem", marginBottom: "1rem" }}>
+                <div style={{ padding: "0.5rem", background: "var(--color-surface)", borderRadius: "var(--radius-sm)" }}>
+                  <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>Distance</span>
+                  <div style={{ fontWeight: 600 }}>{routeResult.distance_km} km</div>
+                </div>
+                <div style={{ padding: "0.5rem", background: "var(--color-surface)", borderRadius: "var(--radius-sm)" }}>
+                  <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>Est. Time</span>
+                  <div style={{ fontWeight: 600 }}>~{routeResult.duration_minutes} min</div>
+                </div>
+                <div style={{ padding: "0.5rem", background: "var(--color-surface)", borderRadius: "var(--radius-sm)" }}>
+                  <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>Est. Fuel Cost</span>
+                  <div style={{ fontWeight: 600 }}>₹{routeResult.fuel_cost}</div>
+                </div>
+                <div style={{ padding: "0.5rem", background: "var(--color-surface)", borderRadius: "var(--radius-sm)" }}>
+                  <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>Green Score</span>
+                  <div style={{ fontWeight: 600, color: "var(--color-success)" }}>{routeResult.greenScore}/100</div>
+                </div>
+              </div>
+              {routeResult.geometry ? (
+                <RouteMap
+                  geometry={routeResult.geometry}
+                  pickupLocation={jobs.find((j) => j._id === routeForm.jobId)?.pickupLocation}
+                  deliveryLocation={jobs.find((j) => j._id === routeForm.jobId)?.deliveryLocation}
+                />
+              ) : (
+                <div style={{ height: "200px", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--color-surface)", borderRadius: "var(--radius)", color: "var(--color-text-muted)" }}>
+                  Map loading...
+                </div>
+              )}
             </div>
           )}
         </div>
