@@ -39,9 +39,14 @@ exports.getAllJobs = asyncHandler(async (req, res, next) => {
     pickup,
     delivery,
     sort,
+    mine,
   } = req.query;
 
   let filter = {};
+
+  if (mine === "true" && req.user?.role === "shipper") {
+    filter.shipper = req.user._id;
+  }
 
   if (status) {
     filter.status = status;
