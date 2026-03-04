@@ -20,6 +20,11 @@ const userSchema = mongoose.Schema(
       enum: ["shipper", "transporter", "admin"],
       default: "shipper"
     },
+    phone: {
+      type: String,
+      trim: true,
+      default: "",
+    },
     isBlocked: {
       type: Boolean,
       default: false,

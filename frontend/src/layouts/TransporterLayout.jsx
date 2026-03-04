@@ -10,12 +10,16 @@ import {
   Bell,
   Star,
   Sparkles,
+  User,
+  Send,
 } from "lucide-react";
 
 const links = [
   { to: "/transporter/dashboard", label: "Dashboard", icon: <LayoutDashboard size={18} /> },
+  { to: "/transporter/profile", label: "Profile", icon: <User size={18} /> },
   { to: "/transporter/jobs", label: "Browse Jobs", icon: <Search size={18} /> },
   { to: "/transporter/trucks", label: "My Trucks", icon: <Truck size={18} /> },
+  { to: "/transporter/requests", label: "Requests", icon: <Send size={18} /> },
   { to: "/transporter/trips", label: "My Trips", icon: <MapPin size={18} /> },
   { to: "/payments", label: "Payments", icon: <CreditCard size={18} /> },
   { to: "/notifications", label: "Notifications", icon: <Bell size={18} /> },

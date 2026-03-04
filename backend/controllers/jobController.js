@@ -63,7 +63,7 @@ exports.getAllJobs = asyncHandler(async (req, res, next) => {
 
   let query = Job.find(filter)
     .populate("shipper", "name email")
-    .populate("transporter", "name email");
+    .populate("transporter", "name email phone");
 
   if (sort === "price") {
     query = query.sort({ price: 1 });

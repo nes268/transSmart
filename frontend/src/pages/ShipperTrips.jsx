@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { getShipperTrips } from "../services/tripService";
 import { formatDate } from "../utils/formatDate";
 import Loader from "../components/common/Loader";
-import { MapPin, Navigation } from "lucide-react";
+import { MapPin, Navigation, Phone } from "lucide-react";
 
 export default function ShipperTrips() {
   const [trips, setTrips] = useState([]);
@@ -30,8 +30,11 @@ export default function ShipperTrips() {
             {trip.job?.pickupLocation} → {trip.job?.deliveryLocation}
           </div>
           <div className="list-item-meta">
-            Transporter: {trip.transporter?.name || "-"} • Truck:{" "}
-            {trip.truck?.truckNumber || "-"} • {formatDate(trip.startedAt)}
+            Transporter: {trip.transporter?.name || "-"}
+            {trip.transporter?.phone && (
+              <> • <Phone size={12} style={{ display: "inline", verticalAlign: "middle" }} /> {trip.transporter.phone}</>
+            )}
+            {" "}• Truck: {trip.truck?.truckNumber || "-"} • {formatDate(trip.startedAt)}
           </div>
         </div>
         <div className="list-item-actions">

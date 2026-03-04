@@ -6,7 +6,7 @@ import { createTrip } from "../services/tripService";
 import { useAuth } from "../hooks/useAuth";
 import { formatDate } from "../utils/formatDate";
 import Loader from "../components/common/Loader";
-import { ArrowLeft, MapPin, User, Star, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, MapPin, User, Star, CheckCircle2, Phone } from "lucide-react";
 
 export default function JobDetails() {
   const { id } = useParams();
@@ -143,10 +143,17 @@ export default function JobDetails() {
           </div>
         )}
         {job.transporter && (
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem", fontSize: "0.875rem" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem", fontSize: "0.875rem" }}>
             <User size={14} style={{ color: "var(--color-text-muted)" }} />
             <span style={{ color: "var(--color-text-muted)" }}>Transporter:</span>
             <span>{job.transporter.name}</span>
+            {job.transporter.phone && (
+              <>
+                <span style={{ color: "var(--color-text-muted)" }}>•</span>
+                <Phone size={12} style={{ color: "var(--color-text-muted)" }} />
+                <span>{job.transporter.phone}</span>
+              </>
+            )}
             <span style={{ color: "var(--color-text-muted)" }}>({job.transporter.email})</span>
             <Link
               to={`/reviews/user/${job.transporter._id}`}

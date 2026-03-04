@@ -140,7 +140,7 @@ exports.getShipperTrips = asyncHandler(async (req, res, next) => {
   const trips = await Trip.find({})
     .populate("job")
     .populate("truck")
-    .populate("transporter", "name email");
+    .populate("transporter", "name email phone");
 
   const shipperTrips = trips.filter((t) => t.job && t.job.shipper && t.job.shipper.toString() === req.user._id.toString());
 
@@ -158,7 +158,7 @@ exports.getTripById = asyncHandler(async (req, res, next) => {
   const trip = await Trip.findById(req.params.id)
     .populate("job")
     .populate("truck")
-    .populate("transporter", "name email");
+    .populate("transporter", "name email phone");
 
   if (!trip) return next(new AppError("Trip not found", 404));
 

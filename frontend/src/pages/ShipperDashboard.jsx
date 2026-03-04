@@ -11,9 +11,11 @@ import {
   Loader2,
   PlusCircle,
   MapPin,
+  Truck,
   CreditCard,
   Bell,
   ArrowRight,
+  Phone,
 } from "lucide-react";
 
 export default function ShipperDashboard() {
@@ -84,6 +86,9 @@ export default function ShipperDashboard() {
       </div>
 
       <div className="quick-actions" style={{ marginBottom: "2rem" }}>
+        <Link to="/shipper/trucks" className="btn btn-secondary btn-sm">
+          <Truck size={14} /> Browse Trucks
+        </Link>
         <Link to="/shipper/trips" className="btn btn-secondary btn-sm">
           <MapPin size={14} /> My Trips
         </Link>
@@ -121,6 +126,11 @@ export default function ShipperDashboard() {
                   <div>
                     <div className="list-item-title">
                       {t.job?.title} → {t.transporter?.name}
+                      {t.transporter?.phone && (
+                        <span style={{ fontWeight: 400, color: "var(--color-text-muted)", marginLeft: "0.5rem" }}>
+                          • <Phone size={12} style={{ display: "inline", verticalAlign: "middle" }} /> {t.transporter.phone}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <span

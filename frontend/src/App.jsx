@@ -17,11 +17,14 @@ import MainLayout from "./layouts/MainLayout";
 import ShipperDashboard from "./pages/ShipperDashboard";
 import CreateJob from "./pages/CreateJob";
 import ShipperJobs from "./pages/ShipperJobs";
+import BrowseTrucks from "./pages/BrowseTrucks";
 import ShipperTrips from "./pages/ShipperTrips";
 
 import TransporterDashboard from "./pages/TransporterDashboard";
+import TransporterProfile from "./pages/TransporterProfile";
 import BrowseJobs from "./pages/BrowseJobs";
 import MyTrucks from "./pages/MyTrucks";
+import TransporterRequests from "./pages/TransporterRequests";
 import MyTrips from "./pages/MyTrips";
 
 import AdminDashboard from "./pages/AdminDashboard";
@@ -61,6 +64,7 @@ function App() {
             <Route path="dashboard" element={<ShipperDashboard />} />
             <Route path="jobs" element={<ShipperJobs />} />
             <Route path="jobs/new" element={<CreateJob />} />
+            <Route path="trucks" element={<BrowseTrucks />} />
             <Route path="trips" element={<ShipperTrips />} />
           </Route>
 
@@ -76,8 +80,10 @@ function App() {
           >
             <Route index element={<Navigate to="/transporter/dashboard" replace />} />
             <Route path="dashboard" element={<TransporterDashboard />} />
+            <Route path="profile" element={<TransporterProfile />} />
             <Route path="jobs" element={<BrowseJobs />} />
             <Route path="trucks" element={<MyTrucks />} />
+            <Route path="requests" element={<TransporterRequests />} />
             <Route path="trips" element={<MyTrips />} />
           </Route>
 

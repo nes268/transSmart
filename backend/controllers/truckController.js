@@ -22,10 +22,29 @@ exports.addTruck = asyncHandler(async (req, res, next) => {
 });
 
 /**
- * Get My Trucks
+ * Get My Trucks (Transporter only)
  */
 exports.getMyTrucks = asyncHandler(async (req, res) => {
   const trucks = await Truck.find({ transporter: req.user._id });
+
+  res.status(200).json({
+    success: true,
+    count: trucks.length,
+    data: trucks,
+  });
+});
+
+/**
+ * Get All Trucks - Browse trucks (Shipper only)
+ */
+exports.getAllTrucks = asyncHandler(async (req, res, next) => {
+  if (req.user.role !== "shipper" && req.user.role !== "admin") {
+    return next(new AppError("Only shippers can browse trucks", 403));
+  }
+
+  const trucks = await Truck.find()
+    .populate("transporter", "name email phone")
+    .sort({ availability: 1, createdAt: -1 });
 
   res.status(200).json({
     success: true,
