@@ -25,11 +25,13 @@ app.use(express.json());
 
 // Routes
 app.use("/api/auth", require("./routes/authRoutes"));
+app.use("/api/users", require("./routes/userRoutes"));
 app.use("/api/jobs", require("./routes/jobRoutes"));
 const dashboardRoutes = require("./routes/dashboardRoutes");
 app.use("/api/dashboard", dashboardRoutes);
 const truckRoutes = require("./routes/truckRoutes");
 app.use("/api/trucks", truckRoutes);
+app.use("/api/truck-requests", require("./routes/truckRequestRoutes"));
 const tripRoutes = require("./routes/tripRoutes");
 app.use("/api/trips", tripRoutes);
 const paymentRoutes = require("./routes/paymentRoutes");

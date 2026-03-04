@@ -6,7 +6,7 @@ import { useSocket } from "../context/SocketContext";
 import LiveMap from "../components/maps/LiveMap";
 import { formatDate } from "../utils/formatDate";
 import Loader from "../components/common/Loader";
-import { ArrowLeft, MapPin, Truck, Clock } from "lucide-react";
+import { ArrowLeft, MapPin, Truck, Clock, User, Phone } from "lucide-react";
 
 export default function TripDetails() {
   const { id } = useParams();
@@ -56,10 +56,22 @@ export default function TripDetails() {
               <MapPin size={14} style={{ flexShrink: 0 }} />
               {trip.job?.pickupLocation} → {trip.job?.deliveryLocation}
             </div>
-            <div className="list-item-meta" style={{ display: "flex", alignItems: "center", gap: "0.375rem", marginTop: "0.375rem" }}>
+            <div className="list-item-meta" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.375rem", marginTop: "0.375rem" }}>
               <Truck size={12} /> {trip.truck?.truckNumber}
               <span style={{ margin: "0 0.25rem" }}>•</span>
               <Clock size={12} /> {formatDate(trip.startedAt)}
+              {trip.transporter?.name && (
+                <>
+                  <span style={{ margin: "0 0.25rem" }}>•</span>
+                  <User size={12} /> {trip.transporter.name}
+                  {trip.transporter?.phone && (
+                    <>
+                      <span style={{ margin: "0 0.25rem" }}>•</span>
+                      <Phone size={12} /> {trip.transporter.phone}
+                    </>
+                  )}
+                </>
+              )}
             </div>
           </div>
           <span

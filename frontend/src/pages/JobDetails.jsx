@@ -4,17 +4,14 @@ import { getAllJobs, acceptJob, completeJob } from "../services/jobService";
 import { getMyTrucks } from "../services/truckService";
 import { createTrip } from "../services/tripService";
 import { useAuth } from "../hooks/useAuth";
-import { useSocket } from "../context/SocketContext";
 import { formatDate } from "../utils/formatDate";
 import Loader from "../components/common/Loader";
-import RouteMap from "../components/maps/RouteMap";
-import { ArrowLeft, MapPin, User, Star, CheckCircle2, Zap } from "lucide-react";
+import { ArrowLeft, MapPin, User, Star, CheckCircle2, Phone } from "lucide-react";
 
 export default function JobDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const socket = useSocket();
   const [job, setJob] = useState(null);
   const [trucks, setTrucks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -40,22 +37,6 @@ export default function JobDetails() {
         .catch(() => setTrucks([]));
     }
   }, [user?.role, showAcceptModal]);
-
-  useEffect(() => {
-    if (!socket?.connected || !id) return;
-    socket.emit("joinJobRoom", id);
-  }, [socket?.connected, id]);
-
-  useEffect(() => {
-    if (!socket?.connected || !id) return;
-    const handler = ({ jobId, optimizedRoute }) => {
-      if (jobId === id) {
-        setJob((prev) => (prev ? { ...prev, optimizedRoute } : null));
-      }
-    };
-    socket.on("job:optimizedRoute", handler);
-    return () => socket.off("job:optimizedRoute", handler);
-  }, [socket?.connected, id]);
 
   const handleAccept = async () => {
     if (!selectedTruck) {
@@ -138,38 +119,6 @@ export default function JobDetails() {
           </div>
         </div>
 
-        {job.optimizedRoute && (
-          <div style={{ marginBottom: "1.5rem" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
-              <Zap size={18} style={{ color: "var(--color-accent)" }} />
-              <h3 style={{ fontSize: "0.9375rem", fontWeight: 600 }}>Optimized Route</h3>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.5rem", marginBottom: "1rem" }}>
-              <div style={{ padding: "0.5rem", background: "var(--color-surface)", borderRadius: "var(--radius-sm)", fontSize: "0.8125rem" }}>
-                <span style={{ color: "var(--color-text-muted)" }}>Distance</span>
-                <div style={{ fontWeight: 600 }}>{job.optimizedRoute.distance} km</div>
-              </div>
-              <div style={{ padding: "0.5rem", background: "var(--color-surface)", borderRadius: "var(--radius-sm)", fontSize: "0.8125rem" }}>
-                <span style={{ color: "var(--color-text-muted)" }}>Est. Time</span>
-                <div style={{ fontWeight: 600 }}>~{Math.round(job.optimizedRoute.duration / 60)} min</div>
-              </div>
-              <div style={{ padding: "0.5rem", background: "var(--color-surface)", borderRadius: "var(--radius-sm)", fontSize: "0.8125rem" }}>
-                <span style={{ color: "var(--color-text-muted)" }}>Fuel Cost</span>
-                <div style={{ fontWeight: 600 }}>₹{job.optimizedRoute.fuelCost}</div>
-              </div>
-              <div style={{ padding: "0.5rem", background: "var(--color-surface)", borderRadius: "var(--radius-sm)", fontSize: "0.8125rem" }}>
-                <span style={{ color: "var(--color-text-muted)" }}>Green Score</span>
-                <div style={{ fontWeight: 600, color: "var(--color-success)" }}>{job.optimizedRoute.greenScore}/100</div>
-              </div>
-            </div>
-            <RouteMap
-              geometry={job.optimizedRoute.geometry}
-              pickupLocation={job.pickupLocation}
-              deliveryLocation={job.deliveryLocation}
-            />
-          </div>
-        )}
-
         <div style={{ marginBottom: "1.25rem" }}>
           <span
             style={{
@@ -194,10 +143,17 @@ export default function JobDetails() {
           </div>
         )}
         {job.transporter && (
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem", fontSize: "0.875rem" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem", fontSize: "0.875rem" }}>
             <User size={14} style={{ color: "var(--color-text-muted)" }} />
             <span style={{ color: "var(--color-text-muted)" }}>Transporter:</span>
             <span>{job.transporter.name}</span>
+            {job.transporter.phone && (
+              <>
+                <span style={{ color: "var(--color-text-muted)" }}>•</span>
+                <Phone size={12} style={{ color: "var(--color-text-muted)" }} />
+                <span>{job.transporter.phone}</span>
+              </>
+            )}
             <span style={{ color: "var(--color-text-muted)" }}>({job.transporter.email})</span>
             <Link
               to={`/reviews/user/${job.transporter._id}`}

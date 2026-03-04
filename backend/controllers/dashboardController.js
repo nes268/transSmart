@@ -8,7 +8,7 @@ exports.getShipperDashboard = asyncHandler(async (req, res, next) => {
   const shipperId = req.user._id;
 
   const jobs = await Job.find({ shipper: shipperId })
-    .populate("transporter", "name email")
+    .populate("transporter", "name email phone")
     .sort({ createdAt: -1 });
 
   const totalJobs = jobs.length;

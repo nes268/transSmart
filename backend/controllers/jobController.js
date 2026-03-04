@@ -39,9 +39,14 @@ exports.getAllJobs = asyncHandler(async (req, res, next) => {
     pickup,
     delivery,
     sort,
+    mine,
   } = req.query;
 
   let filter = {};
+
+  if (mine === "true" && req.user?.role === "shipper") {
+    filter.shipper = req.user._id;
+  }
 
   if (status) {
     filter.status = status;
@@ -63,7 +68,7 @@ exports.getAllJobs = asyncHandler(async (req, res, next) => {
 
   let query = Job.find(filter)
     .populate("shipper", "name email")
-    .populate("transporter", "name email");
+    .populate("transporter", "name email phone");
 
   if (sort === "price") {
     query = query.sort({ price: 1 });

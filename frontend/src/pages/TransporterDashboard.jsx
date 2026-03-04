@@ -14,6 +14,7 @@ import {
   Bell,
   Star,
   ArrowRight,
+  Send,
 } from "lucide-react";
 
 export default function TransporterDashboard() {
@@ -75,6 +76,9 @@ export default function TransporterDashboard() {
       <div className="quick-actions" style={{ marginBottom: "2rem" }}>
         <Link to="/transporter/trucks" className="btn btn-secondary btn-sm">
           <Truck size={14} /> My Trucks
+        </Link>
+        <Link to="/transporter/requests" className="btn btn-secondary btn-sm">
+          <Send size={14} /> Requests
         </Link>
         <Link to="/transporter/trips" className="btn btn-secondary btn-sm">
           <MapPin size={14} /> My Trips

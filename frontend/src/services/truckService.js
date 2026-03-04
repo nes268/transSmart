@@ -10,6 +10,11 @@ export const getMyTrucks = async () => {
   return res.data;
 };
 
+export const getAllTrucks = async () => {
+  const res = await api.get("/trucks/browse");
+  return res.data;
+};
+
 export const updateTruck = async (id, data) => {
   const res = await api.put(`/trucks/${id}`, data);
   return res.data;
