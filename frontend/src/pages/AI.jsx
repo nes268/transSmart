@@ -189,16 +189,62 @@ export default function AI() {
               }}
             >
               <h3 style={{ marginBottom: "0.5rem", fontSize: "0.875rem", fontWeight: 600 }}>Result</h3>
-              <pre
-                style={{
-                  whiteSpace: "pre-wrap",
-                  fontSize: "0.8125rem",
-                  color: "var(--color-text-secondary)",
-                  fontFamily: "var(--font-mono)",
-                }}
-              >
-                {JSON.stringify(matchResult, null, 2)}
-              </pre>
+              <p style={{ color: "var(--color-text-muted)", fontSize: "0.875rem", marginBottom: "1rem" }}>
+                {matchResult.message}
+              </p>
+              {matchResult.job && (
+                <div style={{ marginBottom: "1rem", padding: "0.75rem", background: "var(--color-surface)", borderRadius: "var(--radius-sm)" }}>
+                  <div style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", marginBottom: "0.25rem" }}>Job</div>
+                  <div style={{ fontWeight: 600 }}>{matchResult.job.title}</div>
+                  <div style={{ fontSize: "0.875rem" }}>{matchResult.job.pickupLocation} → {matchResult.job.deliveryLocation}</div>
+                  {matchResult.job.requiredCapacity > 0 && (
+                    <div style={{ fontSize: "0.8125rem", color: "var(--color-text-muted)" }}>Required capacity: {matchResult.job.requiredCapacity} tons</div>
+                  )}
+                </div>
+              )}
+              {matchResult.suggestions && matchResult.suggestions.length > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                  <div style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>
+                    Top matches ({matchResult.suggestions.length}) · Scanned {matchResult.totalScanned ?? 0} trucks
+                  </div>
+                  {matchResult.suggestions.map((s, i) => (
+                    <div
+                      key={s.truck?._id || i}
+                      style={{
+                        padding: "0.75rem",
+                        background: "var(--color-surface)",
+                        borderRadius: "var(--radius-sm)",
+                        border: "1px solid var(--color-border)",
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "0.5rem" }}>
+                        <div>
+                          <span style={{ fontWeight: 600 }}>{s.truck?.truckNumber ?? "Truck"}</span>
+                          <span style={{ marginLeft: "0.5rem", fontSize: "0.8125rem", color: "var(--color-text-muted)" }}>
+                            {s.truck?.capacity} tons · {s.truck?.fuelType ?? "-"} · {s.truck?.availability ?? "-"}
+                          </span>
+                          {s.truck?.transporter && (
+                            <div style={{ fontSize: "0.8125rem", marginTop: "0.25rem", color: "var(--color-text-secondary)" }}>
+                              {s.truck.transporter.name}
+                              {s.truck.transporter.phone && ` · ${s.truck.transporter.phone}`}
+                            </div>
+                          )}
+                        </div>
+                        <span style={{ fontWeight: 600, color: "var(--color-accent)" }}>Score: {s.score}</span>
+                      </div>
+                      {s.reasons && s.reasons.length > 0 && (
+                        <div style={{ marginTop: "0.5rem", fontSize: "0.8125rem", color: "var(--color-text-muted)" }}>
+                          {s.reasons.join(" · ")}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ fontSize: "0.875rem", color: "var(--color-text-muted)" }}>
+                  No suitable trucks found. Try lowering required capacity or add more trucks.
+                </div>
+              )}
             </div>
           )}
         </div>

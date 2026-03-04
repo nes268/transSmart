@@ -27,8 +27,9 @@ export default function ShipperDashboard() {
   useEffect(() => {
     Promise.all([getShipperDashboard(), getShipperTrips()])
       .then(([dashRes, tripsRes]) => {
-        setData(dashRes.data);
-        setTrips(tripsRes.data || []);
+        setData(dashRes?.data ?? null);
+        const tripList = Array.isArray(tripsRes?.data) ? tripsRes.data : [];
+        setTrips(tripList);
       })
       .catch((err) =>
         setError(err.response?.data?.message || "Failed to load dashboard")
@@ -38,6 +39,7 @@ export default function ShipperDashboard() {
 
   if (loading) return <Loader />;
   if (error) return <div className="alert alert-error">{error}</div>;
+  if (!data) return <div className="alert alert-error">Failed to load dashboard</div>;
 
   const { stats, jobs } = data;
 

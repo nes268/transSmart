@@ -13,7 +13,10 @@ export default function MyTrips() {
 
   useEffect(() => {
     getMyTrips()
-      .then((res) => setTrips(res.data || []))
+      .then((res) => {
+        const list = Array.isArray(res?.data) ? res.data : [];
+        setTrips(list);
+      })
       .catch(() => setTrips([]))
       .finally(() => setLoading(false));
   }, []);

@@ -1,18 +1,26 @@
 import { useState, useEffect } from "react";
-import { getMyTruckRequests } from "../services/truckRequestService";
+import { getMyTruckRequests, acceptTruckRequest, rejectTruckRequest } from "../services/truckRequestService";
 import { formatDate } from "../utils/formatDate";
 import Loader from "../components/common/Loader";
-import { Send, Truck, User, Phone, Mail } from "lucide-react";
+import { Send, User, Phone, Mail } from "lucide-react";
 
 export default function TransporterRequests() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchRequests = () => {
     getMyTruckRequests()
-      .then((res) => setRequests(res.data || []))
+      .then((res) => {
+        const list = Array.isArray(res?.data) ? res.data : [];
+        setRequests(list);
+      })
       .catch(() => setRequests([]))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    setLoading(true);
+    fetchRequests();
   }, []);
 
   const pendingRequests = requests.filter((r) => r.status === "pending");
@@ -48,7 +56,7 @@ export default function TransporterRequests() {
               </div>
               <div className="list-stack" style={{ marginBottom: "2rem" }}>
                 {pendingRequests.map((r) => (
-                  <RequestCard key={r._id} request={r} />
+                  <RequestCard key={r._id} request={r} onAccept={fetchRequests} onReject={fetchRequests} />
                 ))}
               </div>
             </>
@@ -71,8 +79,39 @@ export default function TransporterRequests() {
   );
 }
 
-function RequestCard({ request }) {
-  const { shipper, truck, message, status, createdAt } = request;
+function RequestCard({ request, onAccept, onReject }) {
+  const { shipper, job, truck, message, status, createdAt } = request;
+  const [actionLoading, setActionLoading] = useState(null);
+  const [actionError, setActionError] = useState("");
+
+  const handleAccept = async () => {
+    if (!request._id) return;
+    setActionError("");
+    setActionLoading("accept");
+    try {
+      await acceptTruckRequest(request._id);
+      onAccept?.();
+    } catch (err) {
+      setActionError(err.response?.data?.message || "Failed to accept");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!request._id) return;
+    setActionError("");
+    setActionLoading("reject");
+    try {
+      await rejectTruckRequest(request._id);
+      onReject?.();
+    } catch (err) {
+      setActionError(err.response?.data?.message || "Failed to reject");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   return (
     <div className="card card-hover">
       <div className="list-item">
@@ -98,6 +137,28 @@ function RequestCard({ request }) {
               </>
             )}
           </div>
+          {job && (
+            <div
+              style={{
+                marginTop: "0.5rem",
+                padding: "0.5rem 0.75rem",
+                background: "var(--color-surface)",
+                borderRadius: "var(--radius-sm)",
+                fontSize: "0.875rem",
+              }}
+            >
+              <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>Request for job:</span>
+              <div style={{ fontWeight: 600, marginTop: "0.125rem" }}>{job.title}</div>
+              <div style={{ color: "var(--color-text-secondary)" }}>
+                {job.pickupLocation} → {job.deliveryLocation}
+              </div>
+              {job.requiredCapacity > 0 && (
+                <div style={{ fontSize: "0.8125rem", color: "var(--color-text-muted)" }}>
+                  Required capacity: {job.requiredCapacity} tons
+                </div>
+              )}
+            </div>
+          )}
           {message && (
             <p
               style={{
@@ -113,10 +174,35 @@ function RequestCard({ request }) {
           <div className="list-item-meta" style={{ marginTop: "0.375rem" }}>
             {formatDate(createdAt)}
           </div>
+          {actionError && (
+            <div className="alert alert-error" style={{ marginTop: "0.5rem", fontSize: "0.8125rem" }}>{actionError}</div>
+          )}
         </div>
-        <span className={`badge badge-${status === "pending" ? "open" : status === "accepted" ? "completed" : "open"}`}>
-          {status}
-        </span>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.5rem" }}>
+          <span className={`badge badge-${status === "pending" ? "open" : status === "accepted" ? "completed" : "open"}`}>
+            {status}
+          </span>
+          {status === "pending" && (
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={handleAccept}
+                disabled={!!actionLoading}
+              >
+                {actionLoading === "accept" ? "..." : "Accept"}
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={handleReject}
+                disabled={!!actionLoading}
+              >
+                {actionLoading === "reject" ? "..." : "Reject"}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

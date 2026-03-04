@@ -15,11 +15,12 @@ export default function TransporterProfile() {
   useEffect(() => {
     getMe()
       .then((res) => {
-        const data = res.data;
+        const data = res?.data;
+        if (!data) return;
         setProfile(data);
         setFormData({
-          name: data.name || "",
-          phone: data.phone || "",
+          name: data.name ?? "",
+          phone: data.phone ?? "",
         });
       })
       .catch(() => setError("Failed to load profile"))
@@ -35,8 +36,11 @@ export default function TransporterProfile() {
         name: formData.name,
         phone: formData.phone,
       });
-      setProfile(res.data);
-      updateUser({ name: res.data.name, phone: res.data.phone });
+      const updated = res?.data;
+      if (updated) {
+        setProfile(updated);
+        updateUser({ name: updated.name, phone: updated.phone });
+      }
     } catch (err) {
       setError(err.response?.data?.message || "Failed to update profile");
     } finally {

@@ -2,22 +2,31 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { getAllTrucks } from "../services/truckService";
 import { createTruckRequest } from "../services/truckRequestService";
+import { getAllJobs } from "../services/jobService";
 import Loader from "../components/common/Loader";
 import { Truck, User, Phone, Send } from "lucide-react";
 
 export default function BrowseTrucks() {
   const [trucks, setTrucks] = useState([]);
+  const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [requestModal, setRequestModal] = useState(null);
+  const [requestJobId, setRequestJobId] = useState("");
   const [requestMessage, setRequestMessage] = useState("");
   const [requestLoading, setRequestLoading] = useState(false);
   const [requestError, setRequestError] = useState("");
 
   useEffect(() => {
     setLoading(true);
-    getAllTrucks()
-      .then((res) => setTrucks(res.data || []))
+    Promise.all([
+      getAllTrucks().then((res) => (Array.isArray(res?.data) ? res.data : [])),
+      getAllJobs({ mine: "true", status: "open" }).then((res) => (Array.isArray(res?.data) ? res.data : [])),
+    ])
+      .then(([truckList, jobList]) => {
+        setTrucks(truckList);
+        setJobs(jobList);
+      })
       .catch(() => setTrucks([]))
       .finally(() => setLoading(false));
   }, []);
@@ -29,17 +38,18 @@ export default function BrowseTrucks() {
 
   const openRequestModal = (truck) => {
     setRequestModal(truck);
+    setRequestJobId("");
     setRequestMessage("");
     setRequestError("");
   };
 
   const handleSendRequest = async (e) => {
     e.preventDefault();
-    if (!requestModal) return;
+    if (!requestModal || !requestJobId) return;
     setRequestError("");
     setRequestLoading(true);
     try {
-      await createTruckRequest(requestModal._id, requestMessage);
+      await createTruckRequest(requestModal._id, requestJobId, requestMessage);
       setRequestModal(null);
     } catch (err) {
       setRequestError(err.response?.data?.message || "Failed to send request");
@@ -154,6 +164,26 @@ export default function BrowseTrucks() {
             {requestError && <div className="alert alert-error">{requestError}</div>}
             <form onSubmit={handleSendRequest}>
               <div className="form-group">
+                <label>Select Job (required)</label>
+                <select
+                  value={requestJobId}
+                  onChange={(e) => setRequestJobId(e.target.value)}
+                  required
+                >
+                  <option value="">Choose a job...</option>
+                  {jobs.map((j) => (
+                    <option key={j._id} value={j._id}>
+                      {j.title} — {j.pickupLocation} → {j.deliveryLocation}
+                    </option>
+                  ))}
+                </select>
+                {jobs.length === 0 && (
+                  <span style={{ fontSize: "0.8125rem", color: "var(--color-text-muted)" }}>
+                    You have no open jobs. Create a job first.
+                  </span>
+                )}
+              </div>
+              <div className="form-group">
                 <label>Message (optional)</label>
                 <textarea
                   value={requestMessage}
@@ -167,7 +197,7 @@ export default function BrowseTrucks() {
                 <button
                   type="submit"
                   className="btn btn-primary"
-                  disabled={requestLoading}
+                  disabled={requestLoading || !requestJobId || jobs.length === 0}
                 >
                   {requestLoading ? "Sending..." : "Send Request"}
                 </button>

@@ -7,6 +7,11 @@ const truckRequestSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    job: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Job",
+      required: true,
+    },
     truck: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Truck",
