@@ -19,17 +19,29 @@ exports.createReview = asyncHandler(async (req, res, next) => {
     return next(new AppError("Trip not completed yet", 400));
   }
 
+  const userId = req.user._id.toString();
+  const shipperId =
+    trip.job?.shipper?._id?.toString?.() || trip.job?.shipper?.toString?.();
+  const transporterId =
+    trip.transporter?._id?.toString?.() ||
+    trip.transporter?.toString?.();
+
   let reviewee;
 
   // Shipper rating Transporter
-  if (trip.job.createdBy.toString() === req.user._id.toString()) {
-    reviewee = trip.transporter._id;
+  if (shipperId && shipperId === userId) {
+    reviewee = trip.transporter;
   }
   // Transporter rating Shipper
-  else if (trip.transporter._id.toString() === req.user._id.toString()) {
-    reviewee = trip.job.createdBy;
+  else if (transporterId && transporterId === userId) {
+    reviewee = trip.job.shipper;
   } else {
     return next(new AppError("Not authorized to review this trip", 403));
+  }
+
+  const existing = await Review.findOne({ trip: tripId, reviewer: req.user._id });
+  if (existing) {
+    return next(new AppError("You have already reviewed this trip", 400));
   }
 
   const review = await Review.create({
@@ -43,6 +55,17 @@ exports.createReview = asyncHandler(async (req, res, next) => {
   res.status(201).json({
     success: true,
     data: review,
+  });
+});
+
+/**
+ * Get reviews I have written (to filter trips already reviewed)
+ */
+exports.getMyReviews = asyncHandler(async (req, res) => {
+  const reviews = await Review.find({ reviewer: req.user._id }).select("trip");
+  res.status(200).json({
+    success: true,
+    data: reviews,
   });
 });
 

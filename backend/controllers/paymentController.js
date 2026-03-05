@@ -5,23 +5,49 @@ const AppError = require("../utils/AppError");
 const sendNotification = require("../utils/sendNotification");
 
 /**
- * Create Payment (when job created)
+ * Create Payment (shipper creates payment for completed job)
  */
 exports.createPayment = asyncHandler(async (req, res, next) => {
+  if (req.user.role !== "shipper") {
+    return next(new AppError("Only shippers can create payments", 403));
+  }
+
   const job = await Job.findById(req.body.jobId);
 
   if (!job) return next(new AppError("Job not found", 404));
+  if (job.status !== "completed") {
+    return next(new AppError("Payment can only be created for completed jobs", 400));
+  }
+  if (job.shipper.toString() !== req.user._id.toString()) {
+    return next(new AppError("Not authorized to create payment for this job", 403));
+  }
+  if (!job.transporter) {
+    return next(new AppError("Job has no assigned transporter", 400));
+  }
+
+  const existingPayment = await Payment.findOne({ job: job._id });
+  if (existingPayment) {
+    return next(new AppError("Payment already exists for this job", 400));
+  }
 
   const payment = await Payment.create({
     job: job._id,
-    shipper: job.createdBy,
-    transporter: job.assignedTo || null,
-    amount: job.budget,
+    shipper: job.shipper,
+    transporter: job.transporter,
+    amount: job.price,
   });
+
+  const populated = await Payment.findById(payment._id).populate("job");
+
+  // Real-time: notify both shipper and transporter instantly
+  if (global.io) {
+    global.io.to(payment.shipper.toString()).emit("payment:created", populated);
+    global.io.to(payment.transporter.toString()).emit("payment:created", populated);
+  }
 
   res.status(201).json({
     success: true,
-    data: payment,
+    data: populated,
   });
 });
 
@@ -44,6 +70,14 @@ exports.markAsPaid = asyncHandler(async (req, res, next) => {
 
   await payment.save();
 
+  const populated = await Payment.findById(payment._id).populate("job");
+
+  // Real-time: notify both shipper and transporter instantly
+  if (global.io) {
+    global.io.to(payment.shipper.toString()).emit("payment:paid", populated);
+    global.io.to(payment.transporter.toString()).emit("payment:paid", populated);
+  }
+
   await sendNotification({
     userId: payment.transporter,
     type: "payment_done",
@@ -53,7 +87,7 @@ exports.markAsPaid = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({
     success: true,
-    data: payment,
+    data: populated,
   });
 });
 

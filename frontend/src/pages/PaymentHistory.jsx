@@ -2,12 +2,14 @@ import { useState, useEffect } from "react";
 import { getMyPayments, markAsPaid, createPayment } from "../services/paymentService";
 import { getShipperDashboard } from "../services/dashboardService";
 import { useAuth } from "../hooks/useAuth";
+import { useSocket } from "../context/SocketContext";
 import { formatDate } from "../utils/formatDate";
 import Loader from "../components/common/Loader";
 import { CreditCard, PlusCircle, IndianRupee } from "lucide-react";
 
 export default function PaymentHistory() {
   const { user } = useAuth();
+  const { socket } = useSocket();
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
@@ -24,6 +26,55 @@ export default function PaymentHistory() {
   };
 
   useEffect(() => load(), []);
+
+  // Join user room for real-time payment updates
+  useEffect(() => {
+    if (socket?.connected && user?._id) {
+      socket.emit("joinUserRoom", user._id);
+    }
+  }, [socket?.connected, user?._id]);
+
+  // Real-time: payment created (shipper creates, both receive)
+  useEffect(() => {
+    if (!socket?.connected || !user?._id) return;
+    const handler = (payment) => {
+      const shipperId = payment.shipper?._id || payment.shipper;
+      const transporterId = payment.transporter?._id || payment.transporter;
+      if (user._id !== shipperId && user._id !== transporterId) return;
+      setPayments((prev) => {
+        const idx = prev.findIndex((p) => p._id === payment._id);
+        if (idx >= 0) {
+          const next = [...prev];
+          next[idx] = payment;
+          return next;
+        }
+        return [payment, ...prev];
+      });
+    };
+    socket.on("payment:created", handler);
+    return () => socket.off("payment:created", handler);
+  }, [socket?.connected, user]);
+
+  // Real-time: payment marked paid (shipper marks, both receive)
+  useEffect(() => {
+    if (!socket?.connected || !user?._id) return;
+    const handler = (payment) => {
+      const shipperId = payment.shipper?._id || payment.shipper;
+      const transporterId = payment.transporter?._id || payment.transporter;
+      if (user._id !== shipperId && user._id !== transporterId) return;
+      setPayments((prev) => {
+        const idx = prev.findIndex((p) => p._id === payment._id);
+        if (idx >= 0) {
+          const next = [...prev];
+          next[idx] = payment;
+          return next;
+        }
+        return [payment, ...prev];
+      });
+    };
+    socket.on("payment:paid", handler);
+    return () => socket.off("payment:paid", handler);
+  }, [socket?.connected, user]);
 
   useEffect(() => {
     if (user?.role === "shipper") {
@@ -42,9 +93,16 @@ export default function PaymentHistory() {
     if (!showMarkPaid) return;
     setActionLoading(showMarkPaid);
     try {
-      await markAsPaid(showMarkPaid, paymentMethod);
+      const res = await markAsPaid(showMarkPaid, paymentMethod);
       setShowMarkPaid(null);
-      load();
+      const payment = res?.data;
+      if (payment) {
+        setPayments((prev) =>
+          prev.map((p) => (p._id === payment._id ? payment : p))
+        );
+      } else {
+        load();
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -55,8 +113,13 @@ export default function PaymentHistory() {
   const handleCreatePayment = async (jobId) => {
     setCreateLoading(jobId);
     try {
-      await createPayment(jobId);
-      load();
+      const res = await createPayment(jobId);
+      const payment = res?.data;
+      if (payment) {
+        setPayments((prev) => [payment, ...prev]);
+      } else {
+        load();
+      }
     } catch (err) {
       console.error(err);
     } finally {

@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
-import { getMyTrips } from "../services/tripService";
-import { createReview } from "../services/reviewService";
+import { getMyTrips, getShipperTrips } from "../services/tripService";
+import { createReview, getMyReviews } from "../services/reviewService";
+import { useAuth } from "../hooks/useAuth";
 import { formatDate } from "../utils/formatDate";
 import Loader from "../components/common/Loader";
 import { Star, Send } from "lucide-react";
 
 export default function Reviews() {
+  const { user } = useAuth();
   const [trips, setTrips] = useState([]);
+  const [reviewedTripIds, setReviewedTripIds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showReview, setShowReview] = useState(null);
   const [rating, setRating] = useState(5);
@@ -15,13 +18,35 @@ export default function Reviews() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    getMyTrips()
-      .then((res) => setTrips(res.data || []))
-      .catch(() => setTrips([]))
-      .finally(() => setLoading(false));
-  }, []);
+    const load = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const isShipper = user?.role === "shipper";
+        const tripsRes = await (isShipper ? getShipperTrips() : getMyTrips());
+        const list = Array.isArray(tripsRes?.data) ? tripsRes.data : [];
+        setTrips(list);
+        let reviews = [];
+        try {
+          const reviewsRes = await getMyReviews();
+          reviews = Array.isArray(reviewsRes?.data) ? reviewsRes.data : [];
+        } catch {
+          /* ignore */
+        }
+        setReviewedTripIds(reviews.map((r) => r.trip?.toString?.() || r.trip).filter(Boolean));
+      } catch {
+        setTrips([]);
+        setReviewedTripIds([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [user?.role]);
 
-  const completedTrips = trips.filter((t) => t.status === "completed");
+  const completedTrips = trips
+    .filter((t) => t.status === "completed")
+    .filter((t) => !reviewedTripIds.includes(t._id?.toString?.() || t._id));
 
   const handleSubmitReview = async (e) => {
     e.preventDefault();
@@ -33,6 +58,8 @@ export default function Reviews() {
       setShowReview(null);
       setComment("");
       setRating(5);
+      setError("");
+      setReviewedTripIds((prev) => [...prev, showReview._id?.toString?.() || showReview._id]);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to submit review");
     } finally {
