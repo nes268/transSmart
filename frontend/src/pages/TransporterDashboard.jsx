@@ -15,7 +15,9 @@ import {
   Star,
   ArrowRight,
   Send,
+  IndianRupee,
 } from "lucide-react";
+import ChatbotWidget from "../components/chat/ChatbotWidget";
 
 export default function TransporterDashboard() {
   const [data, setData] = useState(null);
@@ -71,6 +73,20 @@ export default function TransporterDashboard() {
             <div className="stat-card-icon green"><CheckCircle2 size={18} /></div>
           </div>
           <div className="stat-card-value">{stats.completedJobs}</div>
+        </div>
+        <div className="stat-card stat-card-cyan">
+          <div className="stat-card-header">
+            <span className="stat-card-label">Total Earnings</span>
+            <div className="stat-card-icon cyan"><IndianRupee size={18} /></div>
+          </div>
+          <div className="stat-card-value">₹{stats.totalEarnings ?? 0}</div>
+        </div>
+        <div className="stat-card stat-card-amber">
+          <div className="stat-card-header">
+            <span className="stat-card-label">Avg Rating</span>
+            <div className="stat-card-icon amber"><Star size={18} /></div>
+          </div>
+          <div className="stat-card-value">{stats.averageRating ?? 0}</div>
         </div>
       </div>
 
@@ -135,6 +151,8 @@ export default function TransporterDashboard() {
           ))}
         </div>
       )}
+
+      <ChatbotWidget />
     </div>
   );
 }

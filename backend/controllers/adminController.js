@@ -68,7 +68,7 @@ exports.deleteUser = asyncHandler(async (req, res) => {
 exports.getAllJobs = asyncHandler(async (req, res) => {
   checkAdmin(req);
 
-  const jobs = await Job.find().populate("createdBy", "name role");
+  const jobs = await Job.find().populate("shipper", "name email role").populate("transporter", "name email");
 
   res.status(200).json({
     success: true,
@@ -154,7 +154,7 @@ exports.getAdvancedAnalytics = asyncHandler(async (req, res) => {
   const mostActiveShipperData = await Job.aggregate([
     {
       $group: {
-        _id: "$createdBy",
+        _id: "$shipper",
         totalJobs: { $sum: 1 },
       },
     },

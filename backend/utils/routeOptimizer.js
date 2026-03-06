@@ -35,6 +35,22 @@ async function getRoute(pickupCoords, dropCoords) {
   };
 }
 
+async function getRoutes(pickupCoords, dropCoords) {
+  const coords = `${pickupCoords.lng},${pickupCoords.lat};${dropCoords.lng},${dropCoords.lat}`;
+  const url = `${OSRM_BASE}/${coords}?overview=full&geometries=geojson&steps=true&alternatives=true`;
+  const res = await fetch(url);
+  const data = await res.json();
+  if (data.code !== "Ok" || !Array.isArray(data.routes) || data.routes.length === 0) {
+    throw new Error(data.message || "Route not found");
+  }
+  return data.routes.map((route) => ({
+    distance: route.distance / 1000,
+    duration: Math.round(route.duration),
+    geometry: route.geometry,
+    legs: route.legs || [],
+  }));
+}
+
 function buildSteps(legs) {
   const steps = [];
   const modifiers = { left: "Turn left", right: "Turn right", straight: "Go straight", slight_left: "Slight left", slight_right: "Slight right" };
@@ -88,4 +104,32 @@ async function optimizeRoute(pickupPlace, dropPlace, fuelType = "diesel", fuelEf
   };
 }
 
-module.exports = { optimizeRoute, geocode };
+async function optimizeRouteCandidates(pickupPlace, dropPlace, fuelType = "diesel", fuelEfficiency = 5) {
+  const [pickupCoords, dropCoords] = await Promise.all([
+    geocode(pickupPlace),
+    geocode(dropPlace)
+  ]);
+
+  const routes = await getRoutes(pickupCoords, dropCoords);
+  const candidates = routes.map((routeData) => {
+    const steps = buildSteps(routeData.legs);
+    const { fuelUsed, fuelCost, greenScore } = calcFuelMetrics(
+      routeData.distance,
+      fuelType,
+      fuelEfficiency
+    );
+    return {
+      distance: Math.round(routeData.distance * 100) / 100,
+      duration: routeData.duration,
+      fuelUsed: Math.round(fuelUsed * 100) / 100,
+      fuelCost,
+      greenScore,
+      steps,
+      geometry: routeData.geometry,
+    };
+  });
+
+  return { candidates, pickupCoords, dropCoords };
+}
+
+module.exports = { optimizeRoute, optimizeRouteCandidates, geocode };

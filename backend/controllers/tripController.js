@@ -1,6 +1,7 @@
 const Trip = require("../models/Trip");
 const Job = require("../models/Job");
 const Truck = require("../models/Truck");
+const GreenScore = require("../models/GreenScore");
 const asyncHandler = require("../middleware/asyncHandler");
 const AppError = require("../utils/AppError");
 const sendNotification = require("../utils/sendNotification");
@@ -27,6 +28,11 @@ exports.createTrip = asyncHandler(async (req, res, next) => {
 
   if (truck.availability !== "available") {
     return next(new AppError("Truck is not available", 400));
+  }
+
+  const requiredCapacity = Number(job.requiredCapacity) || 0;
+  if (requiredCapacity > 0 && truck.capacity < requiredCapacity) {
+    return next(new AppError("Truck capacity is insufficient for this job", 400));
   }
 
   const trip = await Trip.create({
@@ -76,6 +82,27 @@ exports.updateTripStatus = asyncHandler(async (req, res, next) => {
     const truck = await Truck.findById(trip.truck);
     truck.availability = "available";
     await truck.save();
+
+    const jobDoc = trip.job;
+    const jobId = jobDoc?._id || trip.job;
+    if (jobId) {
+      await Job.findByIdAndUpdate(jobId, { status: "completed" });
+    }
+
+    const routeGreenScore = jobDoc?.optimizedRoute?.greenScore;
+    const ecoScore = routeGreenScore != null
+      ? routeGreenScore
+      : truck.fuelType === "electric"
+        ? 85
+        : truck.fuelType === "petrol"
+          ? 60
+          : 50;
+    await GreenScore.create({
+      transporter: trip.transporter,
+      score: Math.round(ecoScore),
+      trip: trip._id,
+      job: jobId,
+    });
 
     await sendNotification({
       userId: trip.job.shipper,

@@ -19,6 +19,7 @@ import {
   Phone,
   IndianRupee,
 } from "lucide-react";
+import ChatbotWidget from "../components/chat/ChatbotWidget";
 
 export default function ShipperDashboard() {
   const [data, setData] = useState(null);
@@ -142,6 +143,13 @@ export default function ShipperDashboard() {
             <div className="stat-card-icon green"><CheckCircle2 size={18} /></div>
           </div>
           <div className="stat-card-value">{stats.completedJobs}</div>
+        </div>
+        <div className="stat-card stat-card-cyan">
+          <div className="stat-card-header">
+            <span className="stat-card-label">Total Spending</span>
+            <div className="stat-card-icon cyan"><IndianRupee size={18} /></div>
+          </div>
+          <div className="stat-card-value">₹{stats.totalSpending ?? 0}</div>
         </div>
       </div>
 
@@ -344,6 +352,8 @@ export default function ShipperDashboard() {
           ))}
         </div>
       )}
+
+      <ChatbotWidget />
     </div>
   );
 }

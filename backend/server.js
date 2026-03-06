@@ -1,11 +1,13 @@
 const express = require("express");
 const dotenv = require("dotenv");
+const path = require("path");
 const cors = require("cors");
 const http = require("http");
 const { Server } = require("socket.io");
 const connectDB = require("./config/db");
+const { registerChatSocketHandlers } = require("./realtime/chatSocket");
 
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, ".env") });
 connectDB();
 
 const app = express();
@@ -40,6 +42,8 @@ const reviewRoutes = require("./routes/reviewRoutes");
 app.use("/api/reviews", reviewRoutes);
 const adminRoutes = require("./routes/adminRoutes");
 app.use("/api/admin", adminRoutes);
+const analyticsRoutes = require("./routes/analyticsRoutes");
+app.use("/api/analytics", analyticsRoutes);
 const aiRoutes = require("./routes/aiRoutes");
 app.use("/api/ai", aiRoutes);
 const notificationRoutes = require("./routes/notificationRoutes");
@@ -55,6 +59,8 @@ app.use(errorHandler);
 
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
+
+  registerChatSocketHandlers({ io, socket });
 
   // Join trip room
   socket.on("joinTrip", (tripId) => {

@@ -26,6 +26,10 @@ const jobSchema = mongoose.Schema(
       type: Number,
       default: 0
     },
+    preferredDeliveryDate: {
+      type: Date,
+      default: null
+    },
     status: {
       type: String,
       enum: ["open", "accepted", "completed"],

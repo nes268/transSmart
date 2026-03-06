@@ -9,6 +9,7 @@ export default function CreateJob() {
   const [pickupLocation, setPickupLocation] = useState("");
   const [deliveryLocation, setDeliveryLocation] = useState("");
   const [requiredCapacity, setRequiredCapacity] = useState("");
+  const [preferredDeliveryDate, setPreferredDeliveryDate] = useState("");
   const [price, setPrice] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -25,6 +26,8 @@ export default function CreateJob() {
         pickupLocation,
         deliveryLocation,
         price: parseFloat(price),
+        requiredCapacity: requiredCapacity ? parseFloat(requiredCapacity) : 0,
+        preferredDeliveryDate: preferredDeliveryDate || null,
       });
       navigate("/shipper");
     } catch (err) {
@@ -121,6 +124,15 @@ export default function CreateJob() {
                 required
               />
             </div>
+          </div>
+          <div className="form-group">
+            <label>Preferred Delivery Date</label>
+            <input
+              type="date"
+              value={preferredDeliveryDate}
+              onChange={(e) => setPreferredDeliveryDate(e.target.value)}
+              min={new Date().toISOString().split("T")[0]}
+            />
           </div>
           <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.5rem" }}>
             <button type="submit" className="btn btn-primary" disabled={loading}>

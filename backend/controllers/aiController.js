@@ -2,10 +2,10 @@ const Truck = require("../models/Truck");
 const Job = require("../models/Job");
 const asyncHandler = require("../middleware/asyncHandler");
 const AppError = require("../utils/AppError");
+const { aiRankTrucksForJob, aiChooseBestRoute } = require("../utils/aiClient");
 
 /**
- * Smart Match: Rule-based truck suggestions for a job (no Python required).
- * Scores by capacity fit, availability, and fuel type.
+ * Smart Match: AI-based truck suggestions for a job.
  */
 exports.smartMatch = asyncHandler(async (req, res, next) => {
   const { jobId } = req.body;
@@ -21,48 +21,27 @@ exports.smartMatch = asyncHandler(async (req, res, next) => {
     .populate("transporter", "name email phone")
     .lean();
 
-  const scored = trucks.map((truck) => {
-    let score = 0;
-    const reasons = [];
+  const aiSuggestions = await aiRankTrucksForJob({ job, trucks });
+  const byId = new Map(trucks.map((t) => [t._id.toString(), t]));
 
-    if (truck.capacity < requiredCapacity) {
-      score -= 1000;
-      reasons.push("Insufficient capacity");
-    } else {
-      const excess = truck.capacity - requiredCapacity;
-      score += Math.max(0, 100 - excess * 5);
-      reasons.push(`Capacity ${truck.capacity} tons ${requiredCapacity ? `(job: ${requiredCapacity})` : ""}`);
-    }
-
-    if (truck.availability === "available") {
-      score += 80;
-      reasons.push("Available now");
-    } else {
-      reasons.push("Currently busy");
-    }
-
-    if (truck.fuelType === "electric") {
-      score += 20;
-      reasons.push("Eco-friendly");
-    }
-
-    return {
-      truck: {
-        _id: truck._id,
-        truckNumber: truck.truckNumber,
-        capacity: truck.capacity,
-        fuelType: truck.fuelType,
-        availability: truck.availability,
-        transporter: truck.transporter,
-      },
-      score: Math.round(score),
-      reasons,
-    };
-  });
-
-  const valid = scored.filter((s) => s.score > -500);
-  const sorted = valid.sort((a, b) => b.score - a.score);
-  const topMatches = sorted.slice(0, 10);
+  const topMatches = aiSuggestions
+    .map((s) => {
+      const truck = byId.get(s.truckId);
+      if (!truck) return null;
+      return {
+        truck: {
+          _id: truck._id,
+          truckNumber: truck.truckNumber,
+          capacity: truck.capacity,
+          fuelType: truck.fuelType,
+          availability: truck.availability,
+          transporter: truck.transporter,
+        },
+        score: s.score,
+        reasons: s.reasons,
+      };
+    })
+    .filter(Boolean);
 
   const suggestion = {
     job: {
@@ -85,7 +64,7 @@ exports.smartMatch = asyncHandler(async (req, res, next) => {
   });
 });
 
-const { optimizeRoute: optimizeRouteUtil } = require("../utils/routeOptimizer");
+const { optimizeRouteCandidates } = require("../utils/routeOptimizer");
 
 exports.optimizeRoute = async (req, res, next) => {
   try {
@@ -106,12 +85,25 @@ exports.optimizeRoute = async (req, res, next) => {
       return res.status(400).json({ message: "Job must have pickup and delivery locations" });
     }
 
-    const optimization = await optimizeRouteUtil(
+    const parsedEfficiency = parseFloat(fuelEfficiency) || 5;
+    const { candidates } = await optimizeRouteCandidates(
       pickup,
       drop,
       fuelType,
-      parseFloat(fuelEfficiency) || 5
+      parsedEfficiency
     );
+    if (!candidates?.length) {
+      return res.status(404).json({ message: "Route not found" });
+    }
+
+    const { bestIndex } = await aiChooseBestRoute({
+      job,
+      candidates,
+      objective: "eco",
+    });
+
+    const safeIndex = Math.max(0, Math.min(candidates.length - 1, bestIndex));
+    const optimization = candidates[safeIndex];
 
     job.optimizedRoute = {
       distance: optimization.distance,
