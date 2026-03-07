@@ -1,38 +1,101 @@
 # TransSmart
 
-A logistics platform that connects **shippers** with **transporters** for cargo delivery. Built with AI-powered smart matching, route optimization, and real-time tracking.
+A smart logistics platform that connects **shippers** with **transporters** for efficient cargo delivery.  
+TransSmart uses **AI-powered truck matching, route optimization, and real-time tracking** to streamline freight operations.
 
 ---
 
 ## Project Overview
 
-TransSmart streamlines freight booking by allowing shippers to post jobs and transporters to browse and accept them. The platform uses Groq AI for intelligent truck matching and route selection, OSRM/OpenStreetMap for routing, and Socket.IO for real-time updates and chat.
+TransSmart simplifies freight booking by allowing **shippers to post delivery jobs** and **transporters to browse and accept them**.
 
-### Key Features
+The platform integrates:
 
-- **Smart Match** – AI ranks trucks for a job using capacity, availability, fuel type, and eco-friendliness
-- **Optimize Route** – Multiple route candidates from OSRM; AI selects the best by objective (eco, fastest, cheapest)
-- **Real-time Chatbot** – Multilingual support; replies in the user’s language for shippers and transporters
-- **Live Trip Tracking** – Real-time location sharing via Socket.IO
-- **Job Lifecycle** – Create jobs → transporter requests → accept → trip → complete → payment
-- **Role-based Access** – Shipper, Transporter, and Admin dashboards
-- **Payments** – Create payments for completed jobs and mark as paid (UPI, card, net banking, cash)
-- **Reviews & Ratings** – Transporters receive reviews from shippers
-- **Analytics** – Dashboard stats and carbon footprint estimation
+- **Groq AI** for intelligent truck matching and route optimization  
+- **OSRM / OpenStreetMap** for routing and geolocation  
+- **Socket.IO** for real-time tracking and communication  
+
+The system provides a **transparent workflow from job creation to payment completion**.
+
+---
+
+## Key Features
+
+### Smart Match
+AI ranks available trucks based on:
+- Capacity
+- Availability
+- Fuel type
+- Eco-friendliness
+
+### Route Optimization
+Multiple route options are generated using **OSRM**, and AI selects the best route based on:
+- Fastest route
+- Cheapest route
+- Eco-friendly route
+
+### Real-Time Chatbot
+- Multilingual support
+- Responds in the user's language
+- Helps both shippers and transporters
+
+### Live Trip Tracking
+- Real-time location updates using **Socket.IO**
+- Interactive map visualization
+
+### Job Lifecycle
+Complete workflow management:
+Create Job → Transporter Request → Accept → Trip Start → Delivery → Payment
+
+### Role-Based Access
+Separate dashboards for:
+- Shippers
+- Transporters
+- Admin
+
+### Payments
+Supports multiple payment options:
+- UPI
+- Card
+- Net Banking
+- Cash
+
+### Reviews & Ratings
+Shippers can rate transporters after job completion.
+
+### Analytics
+Dashboard insights including:
+- Job statistics
+- Platform usage
+- Estimated carbon footprint
 
 ---
 
 ## Problem Statement
 
-Manual freight coordination is slow, opaque, and inefficient. Shippers struggle to find suitable transporters; transporters lack visibility into suitable jobs. Route and vehicle choices are rarely optimized for cost, time, or environmental impact.
+Freight logistics is often **manual, slow, and inefficient**.
 
-### How TransSmart Addresses It
+Common challenges include:
 
-- **AI Smart Match** reduces manual search by recommending the best trucks for each job
-- **Route Optimization** improves fuel use, cost, and emissions
-- **Real-time Chat** provides instant answers for shippers and transporters in their language
-- **Transparent Workflow** – job status, payments, and trip tracking are visible to all parties
-- **Single Platform** – jobs, trucks, trips, payments, and reviews in one place
+- Difficulty finding suitable transporters
+- Lack of transparency in job status
+- Poor route planning
+- Inefficient vehicle utilization
+- Limited visibility into logistics operations
+
+These issues lead to **higher costs, delays, and unnecessary carbon emissions**.
+
+---
+
+## Solution
+
+TransSmart solves these problems by providing a **centralized digital logistics platform**.
+
+- **AI Smart Matching** – Automatically recommends the best trucks for each job.
+- **Route Optimization** – Reduces fuel usage, delivery time, and operational costs.
+- **Real-Time Communication** – Chat system allows instant interaction between users.
+- **Transparent Workflow** – Every stage of the delivery process is visible to both parties.
+- **Unified Platform** – Manages jobs, trucks, trips, payments, and reviews in one system.
 
 ---
 
@@ -40,21 +103,37 @@ Manual freight coordination is slow, opaque, and inefficient. Shippers struggle 
 
 | Layer | Technologies |
 |-------|--------------|
-| **Backend** | Node.js, Express 5, Mongoose, Socket.IO |
-| **Frontend** | React 18, Vite 6, React Router, Axios |
-| **Database** | MongoDB |
-| **AI** | Groq API (llama-3.3-70b-versatile) |
-| **Maps & Routing** | OSRM, Nominatim (OpenStreetMap), Leaflet, React-Leaflet, Mapbox GL (optional) |
-| **Auth** | JWT, bcryptjs |
-| **Real-time** | Socket.IO |
-| **UI** | Framer Motion, Lucide React, CSS |
+| Backend | Node.js, Express 5, Mongoose, Socket.IO |
+| Frontend | React 18, Vite 6, React Router, Axios |
+| Database | MongoDB |
+| AI | Groq API (llama-3.3-70b-versatile) |
+| Maps & Routing | OSRM, Nominatim (OpenStreetMap), Leaflet, React-Leaflet |
+| Authentication | JWT, bcryptjs |
+| Real-time Communication | Socket.IO |
+| UI | Framer Motion, Lucide React, CSS |
 
-### APIs & Services
+---
 
-- **Groq API** – Smart match, route selection, multilingual chatbot
-- **OSRM** – Road routing and route alternatives
-- **Nominatim** – Geocoding (address → coordinates)
-- **Mapbox** (optional) – Styled maps via `VITE_MAPBOX_TOKEN`
+## APIs and Services
+
+### Groq API
+Used for:
+- Smart truck matching
+- Route optimization
+- Multilingual chatbot responses
+
+### OSRM
+Provides:
+- Road routing
+- Route alternatives
+
+### Nominatim
+Used for:
+- Address geocoding
+- Converting addresses into coordinates
+
+### Mapbox (Optional)
+Used for enhanced map styling.
 
 ---
 
@@ -62,25 +141,27 @@ Manual freight coordination is slow, opaque, and inefficient. Shippers struggle 
 
 ### Prerequisites
 
-- **Node.js** (v18+)
-- **MongoDB** (local or cloud, e.g. MongoDB Atlas)
-- **Groq API key** – [Get one](https://console.groq.com) (free tier)
+Make sure the following are installed:
 
-### Step 1: Clone the repository
+- Node.js (v18 or higher)
+- MongoDB (local or MongoDB Atlas)
+- Groq API Key
+
+### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/nes268/transSmart.git
 cd transSmart
 ```
 
-### Step 2: Backend setup
+### 2. Backend Setup
 
 ```bash
 cd backend
 npm install
 ```
 
-Create `backend/.env`:
+Create a `.env` file in the backend folder:
 
 ```env
 PORT=5000
@@ -90,11 +171,7 @@ GROQ_API_KEY=your_groq_api_key
 GROQ_MODEL=llama-3.3-70b-versatile
 ```
 
-- Replace `MONGO_URI` with your MongoDB connection string (e.g. Atlas)
-- Replace `GROQ_API_KEY` with your Groq API key
-- Replace `JWT_SECRET` with a strong secret for production
-
-Start the backend:
+Start the backend server:
 
 ```bash
 npm run dev
@@ -102,24 +179,21 @@ npm run dev
 
 Backend runs at `http://localhost:5000`.
 
-### Step 3: Frontend setup
+### 3. Frontend Setup
 
-Open a new terminal:
+Open another terminal:
 
 ```bash
 cd frontend
 npm install
 ```
 
-Create `frontend/.env` (optional):
+Create an optional `.env` file:
 
 ```env
 VITE_MAPBOX_TOKEN=your_mapbox_token
 VITE_SOCKET_URL=http://localhost:5000
 ```
-
-`VITE_MAPBOX_TOKEN` is optional (used for styled maps).  
-`VITE_SOCKET_URL` defaults to `http://localhost:5000` in dev.
 
 Start the frontend:
 
@@ -127,21 +201,23 @@ Start the frontend:
 npm run dev
 ```
 
-Frontend runs at `http://localhost:5173` (or the port Vite shows).
+Frontend runs at `http://localhost:5173`.
 
-### Step 4: Run the application
+### 4. Run the Application
 
 1. Ensure MongoDB is running.
-2. Backend: `cd backend && npm run dev`
-3. Frontend: `cd frontend && npm run dev`
-4. Open `http://localhost:5173` in the browser.
+2. Start both servers:
+   - **Backend:** `cd backend && npm run dev`
+   - **Frontend:** `cd frontend && npm run dev`
+3. Open in browser: `http://localhost:5173`
 
-### Step 5: Create accounts
+### 5. Create Accounts
 
-- **Register** as Shipper or Transporter.
-- **Shippers** create jobs; **Transporters** browse jobs and add trucks.
-- Use **AI Tools** for Smart Match and Optimize Route.
-- Use the **Chat** button (bottom-right) for real-time help.
+- Register as **Shipper** or **Transporter**
+- **Shippers** create logistics jobs
+- **Transporters** add trucks and browse jobs
+- Use **Smart Match** and **Route Optimization**
+- Chat using the real-time chatbot
 
 ---
 
@@ -149,15 +225,15 @@ Frontend runs at `http://localhost:5173` (or the port Vite shows).
 
 ```
 transSmart/
-├── backend/          # Node.js + Express API
-│   ├── config/       # DB, env
+├── backend/
+│   ├── config/
 │   ├── controllers/
 │   ├── middleware/
 │   ├── models/
-│   ├── realtime/     # Socket.IO chat handlers
+│   ├── realtime/
 │   ├── routes/
-│   └── utils/        # aiClient, routeOptimizer
-├── frontend/         # React + Vite app
+│   └── utils/
+├── frontend/
 │   ├── src/
 │   │   ├── components/
 │   │   ├── context/
@@ -173,18 +249,18 @@ transSmart/
 
 ## Environment Variables
 
-| Variable | Where | Description |
-|----------|-------|-------------|
-| `PORT` | backend | Server port (default: 5000) |
-| `MONGO_URI` | backend | MongoDB connection string |
-| `JWT_SECRET` | backend | Secret for JWT signing |
-| `GROQ_API_KEY` | backend | Groq API key (AI features) |
-| `GROQ_MODEL` | backend | Groq model (default: llama-3.3-70b-versatile) |
-| `VITE_MAPBOX_TOKEN` | frontend | Mapbox token (optional) |
-| `VITE_SOCKET_URL` | frontend | Backend URL for Socket.IO |
+| Variable | Location | Description |
+|----------|----------|-------------|
+| `PORT` | Backend | Server port |
+| `MONGO_URI` | Backend | MongoDB connection string |
+| `JWT_SECRET` | Backend | Secret key for JWT |
+| `GROQ_API_KEY` | Backend | API key for AI features |
+| `GROQ_MODEL` | Backend | Groq model used |
+| `VITE_MAPBOX_TOKEN` | Frontend | Optional Mapbox token |
+| `VITE_SOCKET_URL` | Frontend | Backend URL for Socket.IO |
 
 ---
 
 ## License
 
-ISC
+ISC License
