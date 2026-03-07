@@ -1,4 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
+import { Bell } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 
 export default function Navbar() {
@@ -24,8 +25,8 @@ export default function Navbar() {
         <div className="navbar-actions">
           {user && (
             <>
-              <Link to="/notifications" className="btn btn-ghost btn-sm">
-                Notifications
+              <Link to="/notifications" className="navbar-icon-btn" title="Notifications">
+                <Bell size={18} />
               </Link>
 
               <div className="navbar-user">
