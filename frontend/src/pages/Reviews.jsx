@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { getMyTrips, getShipperTrips } from "../services/tripService";
-import { createReview, getMyReviews } from "../services/reviewService";
+import { createReview, getMyReviews, getUserReviews } from "../services/reviewService";
 import { useAuth } from "../hooks/useAuth";
 import { formatDate } from "../utils/formatDate";
 import Loader from "../components/common/Loader";
@@ -10,6 +10,7 @@ export default function Reviews() {
   const { user } = useAuth();
   const [trips, setTrips] = useState([]);
   const [reviewedTripIds, setReviewedTripIds] = useState([]);
+  const [reviewsReceived, setReviewsReceived] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showReview, setShowReview] = useState(null);
   const [rating, setRating] = useState(5);
@@ -23,26 +24,36 @@ export default function Reviews() {
       setError("");
       try {
         const isShipper = user?.role === "shipper";
-        const tripsRes = await (isShipper ? getShipperTrips() : getMyTrips());
-        const list = Array.isArray(tripsRes?.data) ? tripsRes.data : [];
-        setTrips(list);
-        let reviews = [];
-        try {
-          const reviewsRes = await getMyReviews();
-          reviews = Array.isArray(reviewsRes?.data) ? reviewsRes.data : [];
-        } catch {
-          /* ignore */
+        if (isShipper) {
+          const [tripsRes, reviewsRes] = await Promise.all([
+            getShipperTrips(),
+            getMyReviews().catch(() => ({ data: [] })),
+          ]);
+          const list = Array.isArray(tripsRes?.data) ? tripsRes.data : [];
+          setTrips(list);
+          const reviews = Array.isArray(reviewsRes?.data) ? reviewsRes.data : [];
+          setReviewedTripIds(reviews.map((r) => r.trip?.toString?.() || r.trip).filter(Boolean));
+        } else {
+          setTrips([]);
+          setReviewedTripIds([]);
         }
-        setReviewedTripIds(reviews.map((r) => r.trip?.toString?.() || r.trip).filter(Boolean));
+        if (!isShipper && user?._id) {
+          getUserReviews(user._id)
+            .then((res) => setReviewsReceived(res))
+            .catch(() => setReviewsReceived(null));
+        } else {
+          setReviewsReceived(null);
+        }
       } catch {
         setTrips([]);
         setReviewedTripIds([]);
+        setReviewsReceived(null);
       } finally {
         setLoading(false);
       }
     };
     load();
-  }, [user?.role]);
+  }, [user?.role, user?._id]);
 
   const completedTrips = trips
     .filter((t) => t.status === "completed")
@@ -69,23 +80,63 @@ export default function Reviews() {
 
   if (loading) return <Loader />;
 
+  const isTransporter = user?.role === "transporter";
+  const receivedList = reviewsReceived?.data || [];
+  const hasReviewsReceived = isTransporter && receivedList.length > 0;
+
   return (
     <div className="animate-in">
       <div className="page-header">
         <div>
           <h1 className="page-title">Reviews</h1>
-          <p className="page-subtitle">Rate and review completed trips</p>
+          <p className="page-subtitle">
+            {isTransporter ? "Reviews from shippers" : "Rate and review completed trips"}
+          </p>
         </div>
       </div>
 
-      {completedTrips.length === 0 ? (
+      {hasReviewsReceived && (
+        <div className="card" style={{ marginBottom: "1.5rem" }}>
+          <div className="section-header" style={{ marginBottom: "1rem" }}>
+            <h3 className="section-title">Reviews you received</h3>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <Star size={18} style={{ color: "var(--color-primary)" }} fill="currentColor" />
+              <span style={{ fontWeight: 600 }}>{reviewsReceived.averageRating || "0"}</span>
+              <span style={{ color: "var(--color-text-muted)", fontSize: "0.875rem" }}>
+                ({receivedList.length} review{receivedList.length !== 1 ? "s" : ""})
+              </span>
+            </div>
+          </div>
+          <div className="list-stack">
+            {receivedList.map((r) => (
+              <div key={r._id} className="card card-hover" style={{ padding: "1rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.5rem" }}>
+                  <span className="list-item-title">{r.reviewer?.name || "Shipper"}</span>
+                  <span style={{ display: "flex", alignItems: "center", gap: "0.25rem", color: "var(--color-primary)", fontWeight: 600 }}>
+                    <Star size={14} fill="currentColor" />{r.rating}
+                  </span>
+                </div>
+                {r.comment && (
+                  <p style={{ color: "var(--color-text-muted)", fontSize: "0.875rem", margin: 0, lineHeight: 1.5 }}>{r.comment}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {(isTransporter && !hasReviewsReceived) || (!isTransporter && completedTrips.length === 0) ? (
         <div className="card">
           <div className="empty-state">
             <Star size={32} className="empty-state-icon" />
-            <p className="empty-state-text">No completed trips to review yet.</p>
+            <p className="empty-state-text">
+              {isTransporter ? "No reviews from shippers yet." : "No completed trips to review yet."}
+            </p>
           </div>
         </div>
-      ) : (
+      ) : null}
+
+      {!isTransporter && completedTrips.length > 0 && (
         <div className="list-stack">
           {completedTrips.map((t) => (
             <div key={t._id} className="card card-hover">

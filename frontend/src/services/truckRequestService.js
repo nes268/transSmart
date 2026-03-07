@@ -15,6 +15,11 @@ export const getMyTruckRequests = async () => {
   return res.data;
 };
 
+export const getTruckRequest = async (id) => {
+  const res = await api.get(`/truck-requests/${id}`);
+  return res.data;
+};
+
 export const acceptTruckRequest = async (id) => {
   const res = await api.put(`/truck-requests/${id}/accept`);
   return res.data;

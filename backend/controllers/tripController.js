@@ -1,6 +1,7 @@
 const Trip = require("../models/Trip");
 const Job = require("../models/Job");
 const Truck = require("../models/Truck");
+const Payment = require("../models/Payment");
 const GreenScore = require("../models/GreenScore");
 const asyncHandler = require("../middleware/asyncHandler");
 const AppError = require("../utils/AppError");
@@ -35,6 +36,14 @@ exports.createTrip = asyncHandler(async (req, res, next) => {
     return next(new AppError("Truck capacity is insufficient for this job", 400));
   }
 
+  const activeTrip = await Trip.findOne({
+    transporter: req.user._id,
+    status: { $in: ["accepted", "in_transit", "delivered"] },
+  });
+  if (activeTrip) {
+    return next(new AppError("You have a job in progress. Complete it before accepting another job.", 400));
+  }
+
   const trip = await Trip.create({
     job: jobId,
     transporter: req.user._id,
@@ -54,6 +63,15 @@ exports.createTrip = asyncHandler(async (req, res, next) => {
     message: "Your job has been accepted by a transporter.",
     relatedId: trip._id,
   });
+
+  // Emit trip:created for real-time dashboard update
+  const populatedTrip = await Trip.findById(trip._id)
+    .populate("job", "title pickupLocation deliveryLocation price")
+    .populate("transporter", "name phone")
+    .populate("truck", "truckNumber");
+  if (global.io) {
+    global.io.to(job.shipper.toString()).emit("trip:created", { trip: populatedTrip });
+  }
 
   res.status(201).json({
     success: true,
@@ -149,10 +167,24 @@ exports.getMyTrips = asyncHandler(async (req, res) => {
     .populate("job")
     .populate("truck");
 
+  const jobIds = trips.map((t) => t.job?._id || t.job).filter(Boolean);
+  const paidPayments = await Payment.find({
+    job: { $in: jobIds },
+    transporter: req.user._id,
+    status: "paid",
+  }).select("job");
+  const paidJobIds = new Set(paidPayments.map((p) => p.job?.toString()).filter(Boolean));
+
+  const tripsWithPayment = trips.map((t) => {
+    const jobId = t.job?._id?.toString?.() || t.job?.toString?.();
+    const paid = jobId ? paidJobIds.has(jobId) : false;
+    return { ...t.toObject(), paymentStatus: paid ? "paid" : "yet_to_pay" };
+  });
+
   res.status(200).json({
     success: true,
-    count: trips.length,
-    data: trips,
+    count: tripsWithPayment.length,
+    data: tripsWithPayment,
   });
 });
 

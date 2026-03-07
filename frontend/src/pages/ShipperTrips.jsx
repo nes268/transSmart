@@ -4,8 +4,12 @@ import { getShipperTrips } from "../services/tripService";
 import { formatDate } from "../utils/formatDate";
 import Loader from "../components/common/Loader";
 import { MapPin, Navigation, Phone } from "lucide-react";
+import { useAuth } from "../hooks/useAuth";
+import { useSocket } from "../context/SocketContext";
 
 export default function ShipperTrips() {
+  const { user } = useAuth();
+  const { socket } = useSocket();
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -19,10 +23,30 @@ export default function ShipperTrips() {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    if (socket?.connected && user?._id) {
+      socket.emit("joinUserRoom", user._id);
+    }
+  }, [socket?.connected, user?._id]);
+
+  useEffect(() => {
+    if (!socket?.connected || !user?._id) return;
+    const handler = ({ trip }) => {
+      if (trip) {
+        setTrips((prev) => {
+          const exists = prev.some((t) => t._id === trip._id);
+          if (exists) return prev.map((t) => (t._id === trip._id ? trip : t));
+          return [trip, ...prev];
+        });
+      }
+    };
+    socket.on("trip:created", handler);
+    return () => socket.off("trip:created", handler);
+  }, [socket?.connected, user?._id]);
+
   const activeTrips = trips.filter(
     (t) => t.status !== "completed" && t.status !== "delivered"
   );
-  const completedTrips = trips.filter((t) => t.status === "completed");
 
   const TripCard = ({ trip }) => (
     <div className="card card-hover">
@@ -53,7 +77,7 @@ export default function ShipperTrips() {
             {trip.status.replace("_", " ")}
           </span>
           <span className="list-item-price">₹{trip.job?.price}</span>
-          {(trip.status === "in_transit" || trip.status === "delivered") && (
+          {(trip.status === "accepted" || trip.status === "in_transit" || trip.status === "delivered") && (
             <Link to={`/trips/${trip._id}`} className="btn btn-primary btn-sm">
               <Navigation size={14} /> Track
             </Link>
@@ -68,7 +92,7 @@ export default function ShipperTrips() {
   return (
     <div className="animate-in">
       <div className="page-header">
-        <h1 className="page-title">My Trips</h1>
+        <h1 className="page-title">Track</h1>
       </div>
 
       <div className="section-header">
@@ -84,25 +108,8 @@ export default function ShipperTrips() {
           </div>
         </div>
       ) : (
-        <div className="list-stack" style={{ marginBottom: "2rem" }}>
-          {activeTrips.map((t) => (
-            <TripCard key={t._id} trip={t} />
-          ))}
-        </div>
-      )}
-
-      <div className="section-header">
-        <h2 className="section-title">Completed Trips</h2>
-      </div>
-      {completedTrips.length === 0 ? (
-        <div className="card">
-          <div className="empty-state">
-            <p className="empty-state-text">No completed trips yet.</p>
-          </div>
-        </div>
-      ) : (
         <div className="list-stack">
-          {completedTrips.map((t) => (
+          {activeTrips.map((t) => (
             <TripCard key={t._id} trip={t} />
           ))}
         </div>

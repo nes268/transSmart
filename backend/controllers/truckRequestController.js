@@ -68,6 +68,29 @@ exports.createRequest = asyncHandler(async (req, res, next) => {
 });
 
 /**
+ * Get single truck request by ID (for notification navigation)
+ */
+exports.getRequestById = asyncHandler(async (req, res, next) => {
+  const request = await TruckRequest.findById(req.params.id)
+    .populate("job", "title pickupLocation deliveryLocation status _id")
+    .populate("shipper", "name email")
+    .populate({ path: "truck", populate: { path: "transporter", select: "name" } });
+
+  if (!request) return next(new AppError("Request not found", 404));
+  if (req.user.role !== "transporter") {
+    return next(new AppError("Only transporters can view truck requests", 403));
+  }
+  if (request.truck?.transporter?._id?.toString() !== req.user._id.toString()) {
+    return next(new AppError("This request is for another transporter's truck", 403));
+  }
+
+  res.status(200).json({
+    success: true,
+    data: request,
+  });
+});
+
+/**
  * Get My Requests (Transporter - requests for their trucks)
  */
 exports.getMyRequests = asyncHandler(async (req, res, next) => {
@@ -128,6 +151,14 @@ exports.acceptRequest = asyncHandler(async (req, res, next) => {
     return next(new AppError("Truck is not available", 400));
   }
 
+  const activeTrip = await Trip.findOne({
+    transporter: req.user._id,
+    status: { $in: ["accepted", "in_transit", "delivered"] },
+  });
+  if (activeTrip) {
+    return next(new AppError("You have a job in progress. Complete it before accepting another job.", 400));
+  }
+
   // 1. Update job: accepted, assign transporter
   job.status = "accepted";
   job.transporter = req.user._id;
@@ -163,6 +194,15 @@ exports.acceptRequest = asyncHandler(async (req, res, next) => {
     message: "Your job has been accepted by a transporter.",
     relatedId: trip._id,
   });
+
+  // 7. Emit trip:created for real-time dashboard update (shipper joins user room)
+  const populatedTrip = await Trip.findById(trip._id)
+    .populate("job", "title pickupLocation deliveryLocation price")
+    .populate("transporter", "name phone")
+    .populate("truck", "truckNumber");
+  if (global.io) {
+    global.io.to(job.shipper.toString()).emit("trip:created", { trip: populatedTrip });
+  }
 
   res.status(200).json({
     success: true,

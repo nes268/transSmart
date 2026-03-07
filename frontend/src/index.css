@@ -195,6 +195,14 @@ select {
   border: 1px solid var(--color-border);
 }
 
+.navbar-user-clickable {
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.navbar-user-clickable:hover {
+  opacity: 0.9;
+}
+
 .navbar-user-info {
   text-align: right;
 }

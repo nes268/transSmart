@@ -19,3 +19,8 @@ export const completeJob = async (id) => {
   const res = await api.put(`/jobs/complete/${id}`);
   return res.data;
 };
+
+export const getReturnLoads = async (jobId) => {
+  const res = await api.get(`/jobs/return-loads/${jobId}`);
+  return res.data;
+};

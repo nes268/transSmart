@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { getShipperDashboard } from "../services/dashboardService";
 import { formatDate } from "../utils/formatDate";
 import Loader from "../components/common/Loader";
-import { PlusCircle, Package } from "lucide-react";
+import { PlusCircle, Package, MapPin } from "lucide-react";
 
 export default function ShipperJobs() {
   const [data, setData] = useState(null);
@@ -12,20 +12,30 @@ export default function ShipperJobs() {
   useEffect(() => {
     getShipperDashboard()
       .then((res) => setData(res.data))
+      .catch(() => setData(null))
       .finally(() => setLoading(false));
   }, []);
 
   if (loading) return <Loader />;
 
-  const { jobs } = data;
+  const jobs = data?.jobs || [];
 
   return (
     <div className="animate-in">
       <div className="page-header">
         <h1 className="page-title">My Jobs</h1>
-        <Link to="/shipper/jobs/new" className="btn btn-primary">
-          <PlusCircle size={16} /> Create Job
-        </Link>
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          <Link to="/shipper/trips" className="btn btn-secondary">
+            <MapPin size={16} /> Track
+          </Link>
+          <Link to="/shipper/jobs/new" className="btn btn-primary">
+            <PlusCircle size={16} /> Create Job
+          </Link>
+        </div>
+      </div>
+
+      <div className="section-header">
+        <h2 className="section-title">Jobs</h2>
       </div>
 
       {jobs.length === 0 ? (

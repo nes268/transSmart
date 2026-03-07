@@ -4,12 +4,10 @@ import Sidebar from "../components/common/Sidebar";
 
 const links = [
   { to: "/transporter/dashboard", label: "Dashboard" },
-  { to: "/transporter/profile", label: "Profile" },
   { to: "/transporter/jobs", label: "Browse Jobs" },
   { to: "/transporter/trucks", label: "My Trucks" },
-  { to: "/transporter/requests", label: "Requests" },
   { to: "/transporter/trips", label: "My Trips" },
-  { to: "/payments", label: "Payments" },
+  { to: "/invoices", label: "Invoices" },
   { to: "/reviews", label: "Reviews" },
   { to: "/ai", label: "AI Tools" },
 ];

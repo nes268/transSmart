@@ -29,7 +29,7 @@ export default function TripDetails() {
   const isTransporter = user?.role === "transporter";
   const isShipper = user?.role === "shipper";
   const canTrack =
-    (trip.status === "in_transit" || trip.status === "delivered") &&
+    (trip.status === "accepted" || trip.status === "in_transit" || trip.status === "delivered") &&
     (isTransporter || isShipper);
   const location = trip.currentLocation;
 
@@ -104,7 +104,7 @@ export default function TripDetails() {
           <div className="empty-state">
             <MapPin size={32} className="empty-state-icon" />
             <p className="empty-state-text">
-              Live tracking is available when the trip is in transit.
+              Live tracking is available when the trip is accepted or in transit.
             </p>
           </div>
         </div>

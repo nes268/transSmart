@@ -56,12 +56,6 @@ export default function TransporterDashboard() {
           </div>
           <div className="stat-card-value">{stats.completedJobs}</div>
         </div>
-        <div className="stat-card stat-card-cyan">
-          <div className="stat-card-header">
-            <span className="stat-card-label">Total Earnings</span>
-          </div>
-          <div className="stat-card-value">₹{stats.totalEarnings ?? 0}</div>
-        </div>
         <div className="stat-card stat-card-amber">
           <div className="stat-card-header">
             <span className="stat-card-label">Avg Rating</span>
@@ -72,9 +66,7 @@ export default function TransporterDashboard() {
 
       <div className="quick-actions" style={{ marginBottom: "2rem" }}>
         <Link to="/transporter/trucks" className="btn btn-secondary btn-sm">My Trucks</Link>
-        <Link to="/transporter/requests" className="btn btn-secondary btn-sm">Requests</Link>
         <Link to="/transporter/trips" className="btn btn-secondary btn-sm">My Trips</Link>
-        <Link to="/payments" className="btn btn-secondary btn-sm">Earnings</Link>
         <Link to="/notifications" className="btn btn-secondary btn-sm">Notifications</Link>
         <Link to="/reviews" className="btn btn-secondary btn-sm">Reviews</Link>
       </div>

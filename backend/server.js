@@ -38,6 +38,8 @@ const tripRoutes = require("./routes/tripRoutes");
 app.use("/api/trips", tripRoutes);
 const paymentRoutes = require("./routes/paymentRoutes");
 app.use("/api/payments", paymentRoutes);
+const invoiceRoutes = require("./routes/invoiceRoutes");
+app.use("/api/invoices", invoiceRoutes);
 const reviewRoutes = require("./routes/reviewRoutes");
 app.use("/api/reviews", reviewRoutes);
 const adminRoutes = require("./routes/adminRoutes");
