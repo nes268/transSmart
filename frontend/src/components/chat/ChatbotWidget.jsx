@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MessageCircle, Send, X } from "lucide-react";
 import { useSocket } from "../../context/SocketContext";
 import { useAuth } from "../../context/AuthContext";
 
@@ -97,7 +96,6 @@ export default function ChatbotWidget() {
           }}
           title="Chat"
         >
-          <MessageCircle size={18} />
           Chat
         </button>
       ) : (
@@ -129,7 +127,7 @@ export default function ChatbotWidget() {
               </div>
             </div>
             <button className="btn btn-ghost btn-sm" onClick={() => setOpen(false)} aria-label="Close chat">
-              <X size={16} />
+              Close
             </button>
           </div>
 
@@ -154,7 +152,7 @@ export default function ChatbotWidget() {
                   borderRadius: 14,
                   background:
                     m.role === "user"
-                      ? "rgba(124, 58, 237, 0.35)"
+                      ? "rgba(201, 155, 74, 0.25)"
                       : "rgba(255,255,255,0.06)",
                   border: "1px solid rgba(255,255,255,0.10)",
                   whiteSpace: "pre-wrap",
@@ -210,7 +208,7 @@ export default function ChatbotWidget() {
               disabled={!socket}
             />
             <button className="btn btn-primary" onClick={send} disabled={!socket || !input.trim()}>
-              <Send size={16} />
+              Send
             </button>
           </div>
         </div>

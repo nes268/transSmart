@@ -1,6 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
-import { Truck, Bell, LogOut } from "lucide-react";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -19,17 +18,14 @@ export default function Navbar() {
     <nav className="navbar">
       <div className="navbar-inner">
         <Link to="/" className="navbar-brand">
-          <div className="navbar-brand-icon">
-            <Truck size={18} />
-          </div>
           <span className="navbar-brand-text">TransSmart</span>
         </Link>
 
         <div className="navbar-actions">
           {user && (
             <>
-              <Link to="/notifications" className="navbar-icon-btn" title="Notifications">
-                <Bell size={16} />
+              <Link to="/notifications" className="btn btn-ghost btn-sm">
+                Notifications
               </Link>
 
               <div className="navbar-user">
@@ -40,8 +36,8 @@ export default function Navbar() {
                 <div className="navbar-avatar">{initials}</div>
               </div>
 
-              <button onClick={handleLogout} className="navbar-icon-btn" title="Logout">
-                <LogOut size={16} />
+              <button onClick={handleLogout} className="btn btn-ghost btn-sm">
+                Log out
               </button>
             </>
           )}

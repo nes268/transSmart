@@ -5,20 +5,6 @@ import { getShipperTrips } from "../services/tripService";
 import { getMyPayments, createPayment, markAsPaid } from "../services/paymentService";
 import { formatDate } from "../utils/formatDate";
 import Loader from "../components/common/Loader";
-import {
-  Package,
-  Clock,
-  CheckCircle2,
-  Loader2,
-  PlusCircle,
-  MapPin,
-  Truck,
-  CreditCard,
-  Bell,
-  ArrowRight,
-  Phone,
-  IndianRupee,
-} from "lucide-react";
 import ChatbotWidget from "../components/chat/ChatbotWidget";
 
 export default function ShipperDashboard() {
@@ -110,7 +96,6 @@ export default function ShipperDashboard() {
           <p className="page-subtitle">Overview of your shipping activity</p>
         </div>
         <Link to="/shipper/jobs/new" className="btn btn-primary">
-          <PlusCircle size={16} />
           Create Job
         </Link>
       </div>
@@ -119,65 +104,47 @@ export default function ShipperDashboard() {
         <div className="stat-card stat-card-purple">
           <div className="stat-card-header">
             <span className="stat-card-label">Total Jobs</span>
-            <div className="stat-card-icon"><Package size={18} /></div>
           </div>
           <div className="stat-card-value">{stats.totalJobs}</div>
         </div>
         <div className="stat-card stat-card-cyan">
           <div className="stat-card-header">
             <span className="stat-card-label">Open</span>
-            <div className="stat-card-icon cyan"><Clock size={18} /></div>
           </div>
           <div className="stat-card-value">{stats.openJobs}</div>
         </div>
         <div className="stat-card stat-card-amber">
           <div className="stat-card-header">
             <span className="stat-card-label">Accepted</span>
-            <div className="stat-card-icon amber"><Loader2 size={18} /></div>
           </div>
           <div className="stat-card-value">{stats.acceptedJobs}</div>
         </div>
         <div className="stat-card stat-card-green">
           <div className="stat-card-header">
             <span className="stat-card-label">Completed</span>
-            <div className="stat-card-icon green"><CheckCircle2 size={18} /></div>
           </div>
           <div className="stat-card-value">{stats.completedJobs}</div>
         </div>
         <div className="stat-card stat-card-cyan">
           <div className="stat-card-header">
             <span className="stat-card-label">Total Spending</span>
-            <div className="stat-card-icon cyan"><IndianRupee size={18} /></div>
           </div>
           <div className="stat-card-value">₹{stats.totalSpending ?? 0}</div>
         </div>
       </div>
 
       <div className="quick-actions" style={{ marginBottom: "2rem" }}>
-        <Link to="/shipper/trucks" className="btn btn-secondary btn-sm">
-          <Truck size={14} /> Browse Trucks
-        </Link>
-        <Link to="/shipper/trips" className="btn btn-secondary btn-sm">
-          <MapPin size={14} /> My Trips
-        </Link>
-        <Link to="/payments" className="btn btn-secondary btn-sm">
-          <CreditCard size={14} /> Payments
-        </Link>
-        <Link to="/notifications" className="btn btn-secondary btn-sm">
-          <Bell size={14} /> Notifications
-        </Link>
+        <Link to="/shipper/trucks" className="btn btn-secondary btn-sm">Browse Trucks</Link>
+        <Link to="/shipper/trips" className="btn btn-secondary btn-sm">My Trips</Link>
+        <Link to="/payments" className="btn btn-secondary btn-sm">Payments</Link>
+        <Link to="/notifications" className="btn btn-secondary btn-sm">Notifications</Link>
       </div>
 
       {(jobsNeedingPayment.length > 0 || pendingPayments.length > 0) && (
         <div className="card" style={{ marginBottom: "2rem" }}>
           <div className="section-header" style={{ marginBottom: "1rem" }}>
-            <h2 className="section-title">
-              <CreditCard size={18} style={{ marginRight: "0.5rem", verticalAlign: "middle" }} />
-              Make Payment
-            </h2>
-            <Link to="/payments" className="btn btn-ghost btn-sm">
-              View all <ArrowRight size={14} />
-            </Link>
+            <h2 className="section-title">Make Payment</h2>
+            <Link to="/payments" className="btn btn-ghost btn-sm">View all</Link>
           </div>
           <p style={{ color: "var(--color-text-muted)", fontSize: "0.875rem", marginBottom: "1rem" }}>
             Pay transporters for completed jobs
@@ -191,16 +158,13 @@ export default function ShipperDashboard() {
                   <div key={j._id} className="list-item" style={{ padding: "0.5rem 0" }}>
                     <div>
                       <span className="list-item-title">{j.title}</span>
-                      <span className="list-item-price" style={{ marginLeft: "0.75rem" }}>
-                        <IndianRupee size={14} style={{ verticalAlign: "middle" }} />{j.price}
-                      </span>
+                      <span className="list-item-price" style={{ marginLeft: "0.75rem" }}>₹{j.price}</span>
                     </div>
                     <button
                       className="btn btn-primary btn-sm"
                       disabled={createLoading === j._id}
                       onClick={(e) => handleCreatePayment(j._id, e)}
                     >
-                      <PlusCircle size={14} />
                       {createLoading === j._id ? "Creating..." : "Create & Pay"}
                     </button>
                   </div>
@@ -217,8 +181,7 @@ export default function ShipperDashboard() {
                   <div key={p._id} className="list-item" style={{ padding: "0.5rem 0" }}>
                     <div>
                       <span className="list-item-title">
-                        <IndianRupee size={14} style={{ verticalAlign: "middle", marginRight: "0.25rem" }} />
-                        {p.amount} — {p.job?.title || "Job"}
+                        ₹{p.amount} — {p.job?.title || "Job"}
                       </span>
                     </div>
                     <button
@@ -266,14 +229,11 @@ export default function ShipperDashboard() {
 
       <div className="section-header">
         <h2 className="section-title">Active Trips</h2>
-        <Link to="/shipper/trips" className="btn btn-ghost btn-sm">
-          View all <ArrowRight size={14} />
-        </Link>
+        <Link to="/shipper/trips" className="btn btn-ghost btn-sm">View all</Link>
       </div>
       {trips.filter((t) => t.status !== "completed").length === 0 ? (
         <div className="card" style={{ marginBottom: "2rem" }}>
           <div className="empty-state">
-            <MapPin size={32} className="empty-state-icon" />
             <p className="empty-state-text">
               No active trips. Trips appear when a transporter accepts your job.
             </p>
@@ -292,7 +252,7 @@ export default function ShipperDashboard() {
                       {t.job?.title} → {t.transporter?.name}
                       {t.transporter?.phone && (
                         <span style={{ fontWeight: 400, color: "var(--color-text-muted)", marginLeft: "0.5rem" }}>
-                          • <Phone size={12} style={{ display: "inline", verticalAlign: "middle" }} /> {t.transporter.phone}
+                          • {t.transporter.phone}
                         </span>
                       )}
                     </div>
@@ -314,20 +274,17 @@ export default function ShipperDashboard() {
 
       <div className="section-header">
         <h2 className="section-title">My Jobs</h2>
-        <Link to="/shipper/jobs/new" className="btn btn-primary btn-sm">
-          <PlusCircle size={14} /> New Job
-        </Link>
+        <Link to="/shipper/jobs/new" className="btn btn-primary btn-sm">New Job</Link>
       </div>
 
       {jobs.length === 0 ? (
         <div className="card">
           <div className="empty-state">
-            <Package size={32} className="empty-state-icon" />
             <p className="empty-state-text">
               No jobs yet. Create your first job to get started.
             </p>
             <Link to="/shipper/jobs/new" className="btn btn-primary" style={{ marginTop: "0.5rem" }}>
-              <PlusCircle size={16} /> Create Job
+              Create Job
             </Link>
           </div>
         </div>

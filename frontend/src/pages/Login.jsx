@@ -1,9 +1,7 @@
 import { useState } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { login as loginApi } from "../services/authService";
 import { useAuth } from "../hooks/useAuth";
-import { Truck } from "lucide-react";
-
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -11,7 +9,6 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -43,9 +40,6 @@ export default function Login() {
     <div className="auth-page">
       <div className="auth-card animate-in">
         <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
-          <div className="landing-logo" style={{ margin: "0 auto 1rem", width: 44, height: 44 }}>
-            <Truck size={22} />
-          </div>
           <h1 className="auth-title">Welcome back</h1>
           <p className="auth-subtitle">Sign in to your TransSmart account</p>
         </div>

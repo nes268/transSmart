@@ -11,7 +11,6 @@ export default function Sidebar({ links }) {
             `sidebar-link${isActive ? " active" : ""}`
           }
         >
-          {link.icon && <span className="sidebar-link-icon">{link.icon}</span>}
           {link.label}
         </NavLink>
       ))}
