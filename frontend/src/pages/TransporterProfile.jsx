@@ -54,8 +54,8 @@ export default function TransporterProfile() {
     <div className="animate-in">
       <div className="page-header">
         <h1 className="page-title">Profile</h1>
-        <p className="page-subtitle">Manage your contact information</p>
       </div>
+
 
       <div className="card" style={{ maxWidth: "480px" }}>
         {error && <div className="alert alert-error">{error}</div>}

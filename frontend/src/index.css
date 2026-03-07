@@ -243,7 +243,7 @@ select {
 .navbar-icon-btn:hover {
   background: var(--color-surface-hover);
   color: var(--color-text);
-  border-color: var(--color-border-hover);
+  box-shadow: var(--shadow-sm);
 }
 
 /* ==================== SIDEBAR ==================== */
@@ -315,9 +315,8 @@ select {
 }
 
 .card-hover:hover {
-  border-color: var(--color-border-hover);
   background: var(--color-surface-hover);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   box-shadow: var(--shadow);
 }
 
@@ -329,9 +328,8 @@ select {
 }
 
 .card-interactive:hover {
-  border-color: rgba(201, 155, 74, 0.25);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  transform: translateY(-2px);
 }
 
 /* ==================== STAT CARDS ==================== */
@@ -350,7 +348,7 @@ select {
   padding: 1.75rem 1.5rem;
   position: relative;
   overflow: hidden;
-  transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
+  transition: transform var(--transition), box-shadow var(--transition);
 }
 
 .stat-card::after {
@@ -371,7 +369,6 @@ select {
 
 .stat-card:hover {
   transform: translateY(-2px);
-  border-color: var(--color-border-hover);
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
 }
 
@@ -954,8 +951,7 @@ select {
 }
 
 .landing-feature-card:hover {
-  border-color: var(--color-border-hover);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   box-shadow: var(--shadow);
 }
 

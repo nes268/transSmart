@@ -14,15 +14,18 @@ exports.createRequest = asyncHandler(async (req, res, next) => {
     return next(new AppError("Only shippers can send truck requests", 403));
   }
 
-  const { truckId, jobId, message } = req.body;
-  if (!jobId) return next(new AppError("Job is required", 400));
+  const { truckId, jobId, job, message } = req.body;
+  const jobRef = jobId || job;
+  if (!jobRef || (typeof jobRef === "string" && !jobRef.trim())) {
+    return next(new AppError("Job is required", 400));
+  }
 
-  const job = await Job.findById(jobId);
-  if (!job) return next(new AppError("Job not found", 404));
-  if (job.shipper.toString() !== req.user._id.toString()) {
+  const jobDoc = await Job.findById(jobRef);
+  if (!jobDoc) return next(new AppError("Job not found", 404));
+  if (jobDoc.shipper.toString() !== req.user._id.toString()) {
     return next(new AppError("You can only request a truck for your own job", 403));
   }
-  if (job.status !== "open") {
+  if (jobDoc.status !== "open") {
     return next(new AppError("Job is no longer open for requests", 400));
   }
 
@@ -32,7 +35,7 @@ exports.createRequest = asyncHandler(async (req, res, next) => {
   const existing = await TruckRequest.findOne({
     shipper: req.user._id,
     truck: truckId,
-    job: jobId,
+    job: jobRef,
     status: "pending",
   });
   if (existing) {
@@ -41,7 +44,7 @@ exports.createRequest = asyncHandler(async (req, res, next) => {
 
   const request = await TruckRequest.create({
     shipper: req.user._id,
-    job: jobId,
+    job: jobRef,
     truck: truckId,
     message: message || "",
   });
@@ -49,7 +52,7 @@ exports.createRequest = asyncHandler(async (req, res, next) => {
   await sendNotification({
     userId: truck.transporter._id,
     type: "truck_request",
-    message: `${req.user.name} requested truck ${truck.truckNumber} for job "${job.title}"`,
+    message: `${req.user.name} requested truck ${truck.truckNumber} for job "${jobDoc.title}"`,
     relatedId: request._id,
   });
 
