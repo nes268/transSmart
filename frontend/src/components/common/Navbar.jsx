@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Bell } from "lucide-react";
+import { Bell, LogOut } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 
 export default function Navbar() {
@@ -25,10 +25,6 @@ export default function Navbar() {
         <div className="navbar-actions">
           {user && (
             <>
-              <Link to="/notifications" className="navbar-icon-btn" title="Notifications">
-                <Bell size={18} />
-              </Link>
-
               <div className="navbar-user">
                 <div className="navbar-user-info">
                   <div className="navbar-user-name">{user.name}</div>
@@ -37,8 +33,12 @@ export default function Navbar() {
                 <div className="navbar-avatar">{initials}</div>
               </div>
 
-              <button onClick={handleLogout} className="btn btn-ghost btn-sm">
-                Log out
+              <Link to="/notifications" className="navbar-icon-btn" title="Notifications">
+                <Bell size={18} />
+              </Link>
+
+              <button onClick={handleLogout} className="navbar-icon-btn" title="Log out">
+                <LogOut size={18} />
               </button>
             </>
           )}

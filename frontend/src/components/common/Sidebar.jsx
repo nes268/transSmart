@@ -7,6 +7,7 @@ export default function Sidebar({ links }) {
         <NavLink
           key={link.to}
           to={link.to}
+          end={link.end ?? false}
           className={({ isActive }) =>
             `sidebar-link${isActive ? " active" : ""}`
           }

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { getShipperDashboard } from "../services/dashboardService";
 import { getShipperTrips } from "../services/tripService";
 import { getMyPayments, createPayment, markAsPaid } from "../services/paymentService";
+import { createJob } from "../services/jobService";
 import { formatDate } from "../utils/formatDate";
 import Loader from "../components/common/Loader";
 import ChatbotWidget from "../components/chat/ChatbotWidget";
@@ -17,6 +18,13 @@ export default function ShipperDashboard() {
   const [actionLoading, setActionLoading] = useState(null);
   const [showMarkPaid, setShowMarkPaid] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState("upi");
+  const [showCreateJob, setShowCreateJob] = useState(false);
+  const [jobForm, setJobForm] = useState({
+    title: "", description: "", pickupLocation: "", deliveryLocation: "",
+    requiredCapacity: "", preferredDeliveryDate: "", price: "",
+  });
+  const [jobFormError, setJobFormError] = useState("");
+  const [jobFormLoading, setJobFormLoading] = useState(false);
 
   const loadData = () => {
     Promise.all([getShipperDashboard(), getShipperTrips(), getMyPayments()])
@@ -88,6 +96,32 @@ export default function ShipperDashboard() {
     }
   };
 
+  const handleCreateJobSubmit = async (e) => {
+    e.preventDefault();
+    setJobFormError("");
+    setJobFormLoading(true);
+    try {
+      await createJob({
+        title: jobForm.title,
+        description: jobForm.description,
+        pickupLocation: jobForm.pickupLocation,
+        deliveryLocation: jobForm.deliveryLocation,
+        price: parseFloat(jobForm.price),
+        requiredCapacity: jobForm.requiredCapacity ? parseFloat(jobForm.requiredCapacity) : 0,
+        preferredDeliveryDate: jobForm.preferredDeliveryDate || null,
+      });
+      setShowCreateJob(false);
+      setJobForm({ title: "", description: "", pickupLocation: "", deliveryLocation: "", requiredCapacity: "", preferredDeliveryDate: "", price: "" });
+      loadData();
+    } catch (err) {
+      setJobFormError(
+        err.response?.data?.message || err.response?.data?.errors?.[0]?.msg || "Failed to create job."
+      );
+    } finally {
+      setJobFormLoading(false);
+    }
+  };
+
   return (
     <div className="animate-in">
       <div className="page-header">
@@ -95,9 +129,9 @@ export default function ShipperDashboard() {
           <h1 className="page-title">Dashboard</h1>
           <p className="page-subtitle">Overview of your shipping activity</p>
         </div>
-        <Link to="/shipper/jobs/new" className="btn btn-primary">
+        <button className="btn btn-primary" onClick={() => setShowCreateJob(true)}>
           Create Job
-        </Link>
+        </button>
       </div>
 
       <div className="stat-grid" style={{ marginBottom: "2rem" }}>
@@ -202,6 +236,60 @@ export default function ShipperDashboard() {
         </div>
       )}
 
+      {showCreateJob && (
+        <div className="modal-overlay" onClick={() => setShowCreateJob(false)}>
+          <div className="modal-content create-job-modal" onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <h3 className="modal-title" style={{ marginBottom: 0 }}>Create New Job</h3>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowCreateJob(false)} style={{ padding: "0.25rem" }}>×</button>
+            </div>
+            <div className="create-job-modal-scroll">
+              {jobFormError && <div className="alert alert-error">{jobFormError}</div>}
+              <form onSubmit={handleCreateJobSubmit}>
+                <div className="form-group">
+                  <label>Job Title</label>
+                  <input type="text" value={jobForm.title} onChange={(e) => setJobForm((f) => ({ ...f, title: e.target.value }))} placeholder="e.g. Furniture delivery" required />
+                </div>
+                <div className="form-group">
+                  <label>Description</label>
+                  <textarea value={jobForm.description} onChange={(e) => setJobForm((f) => ({ ...f, description: e.target.value }))} placeholder="Describe the shipment..." rows={2} required />
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                  <div className="form-group">
+                    <label>Pickup</label>
+                    <input type="text" value={jobForm.pickupLocation} onChange={(e) => setJobForm((f) => ({ ...f, pickupLocation: e.target.value }))} placeholder="Address" required />
+                  </div>
+                  <div className="form-group">
+                    <label>Drop</label>
+                    <input type="text" value={jobForm.deliveryLocation} onChange={(e) => setJobForm((f) => ({ ...f, deliveryLocation: e.target.value }))} placeholder="Address" required />
+                  </div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                  <div className="form-group">
+                    <label>Capacity (tons)</label>
+                    <input type="number" value={jobForm.requiredCapacity} onChange={(e) => setJobForm((f) => ({ ...f, requiredCapacity: e.target.value }))} placeholder="0" min="0" step="0.1" />
+                  </div>
+                  <div className="form-group">
+                    <label>Budget (₹)</label>
+                    <input type="number" value={jobForm.price} onChange={(e) => setJobForm((f) => ({ ...f, price: e.target.value }))} placeholder="0" min="1" step="0.01" required />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Preferred Delivery Date</label>
+                  <input type="date" value={jobForm.preferredDeliveryDate} onChange={(e) => setJobForm((f) => ({ ...f, preferredDeliveryDate: e.target.value }))} min={new Date().toISOString().split("T")[0]} />
+                </div>
+                <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
+                  <button type="submit" className="btn btn-primary" disabled={jobFormLoading}>
+                    {jobFormLoading ? "Creating..." : "Create Job"}
+                  </button>
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowCreateJob(false)}>Cancel</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showMarkPaid && (
         <div className="modal-overlay" onClick={() => setShowMarkPaid(null)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -274,7 +362,6 @@ export default function ShipperDashboard() {
 
       <div className="section-header">
         <h2 className="section-title">My Jobs</h2>
-        <Link to="/shipper/jobs/new" className="btn btn-primary btn-sm">New Job</Link>
       </div>
 
       {jobs.length === 0 ? (
@@ -283,9 +370,9 @@ export default function ShipperDashboard() {
             <p className="empty-state-text">
               No jobs yet. Create your first job to get started.
             </p>
-            <Link to="/shipper/jobs/new" className="btn btn-primary" style={{ marginTop: "0.5rem" }}>
+            <button className="btn btn-primary" style={{ marginTop: "0.5rem" }} onClick={() => setShowCreateJob(true)}>
               Create Job
-            </Link>
+            </button>
           </div>
         </div>
       ) : (

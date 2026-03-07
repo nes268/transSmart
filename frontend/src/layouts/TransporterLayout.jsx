@@ -10,7 +10,6 @@ const links = [
   { to: "/transporter/requests", label: "Requests" },
   { to: "/transporter/trips", label: "My Trips" },
   { to: "/payments", label: "Payments" },
-  { to: "/notifications", label: "Notifications" },
   { to: "/reviews", label: "Reviews" },
   { to: "/ai", label: "AI Tools" },
 ];
