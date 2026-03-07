@@ -2,8 +2,6 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { register as registerApi } from "../services/authService";
 import { useAuth } from "../hooks/useAuth";
-import { Truck } from "lucide-react";
-
 export default function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -41,9 +39,6 @@ export default function Register() {
     <div className="auth-page">
       <div className="auth-card animate-in">
         <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
-          <div className="landing-logo" style={{ margin: "0 auto 1rem", width: 44, height: 44 }}>
-            <Truck size={22} />
-          </div>
           <h1 className="auth-title">Create account</h1>
           <p className="auth-subtitle">Join TransSmart today</p>
         </div>

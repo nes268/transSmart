@@ -14,15 +14,18 @@ exports.createRequest = asyncHandler(async (req, res, next) => {
     return next(new AppError("Only shippers can send truck requests", 403));
   }
 
-  const { truckId, jobId, message } = req.body;
-  if (!jobId) return next(new AppError("Job is required", 400));
+  const { truckId, jobId, job, message } = req.body;
+  const jobRef = jobId || job;
+  if (!jobRef || (typeof jobRef === "string" && !jobRef.trim())) {
+    return next(new AppError("Job is required", 400));
+  }
 
-  const job = await Job.findById(jobId);
-  if (!job) return next(new AppError("Job not found", 404));
-  if (job.shipper.toString() !== req.user._id.toString()) {
+  const jobDoc = await Job.findById(jobRef);
+  if (!jobDoc) return next(new AppError("Job not found", 404));
+  if (jobDoc.shipper.toString() !== req.user._id.toString()) {
     return next(new AppError("You can only request a truck for your own job", 403));
   }
-  if (job.status !== "open") {
+  if (jobDoc.status !== "open") {
     return next(new AppError("Job is no longer open for requests", 400));
   }
 
@@ -32,7 +35,7 @@ exports.createRequest = asyncHandler(async (req, res, next) => {
   const existing = await TruckRequest.findOne({
     shipper: req.user._id,
     truck: truckId,
-    job: jobId,
+    job: jobRef,
     status: "pending",
   });
   if (existing) {
@@ -41,7 +44,7 @@ exports.createRequest = asyncHandler(async (req, res, next) => {
 
   const request = await TruckRequest.create({
     shipper: req.user._id,
-    job: jobId,
+    job: jobRef,
     truck: truckId,
     message: message || "",
   });
@@ -49,7 +52,7 @@ exports.createRequest = asyncHandler(async (req, res, next) => {
   await sendNotification({
     userId: truck.transporter._id,
     type: "truck_request",
-    message: `${req.user.name} requested truck ${truck.truckNumber} for job "${job.title}"`,
+    message: `${req.user.name} requested truck ${truck.truckNumber} for job "${jobDoc.title}"`,
     relatedId: request._id,
   });
 
@@ -61,6 +64,29 @@ exports.createRequest = asyncHandler(async (req, res, next) => {
   res.status(201).json({
     success: true,
     data: populated,
+  });
+});
+
+/**
+ * Get single truck request by ID (for notification navigation)
+ */
+exports.getRequestById = asyncHandler(async (req, res, next) => {
+  const request = await TruckRequest.findById(req.params.id)
+    .populate("job", "title pickupLocation deliveryLocation status _id")
+    .populate("shipper", "name email")
+    .populate({ path: "truck", populate: { path: "transporter", select: "name" } });
+
+  if (!request) return next(new AppError("Request not found", 404));
+  if (req.user.role !== "transporter") {
+    return next(new AppError("Only transporters can view truck requests", 403));
+  }
+  if (request.truck?.transporter?._id?.toString() !== req.user._id.toString()) {
+    return next(new AppError("This request is for another transporter's truck", 403));
+  }
+
+  res.status(200).json({
+    success: true,
+    data: request,
   });
 });
 
@@ -125,6 +151,14 @@ exports.acceptRequest = asyncHandler(async (req, res, next) => {
     return next(new AppError("Truck is not available", 400));
   }
 
+  const activeTrip = await Trip.findOne({
+    transporter: req.user._id,
+    status: { $in: ["accepted", "in_transit", "delivered"] },
+  });
+  if (activeTrip) {
+    return next(new AppError("You have a job in progress. Complete it before accepting another job.", 400));
+  }
+
   // 1. Update job: accepted, assign transporter
   job.status = "accepted";
   job.transporter = req.user._id;
@@ -160,6 +194,15 @@ exports.acceptRequest = asyncHandler(async (req, res, next) => {
     message: "Your job has been accepted by a transporter.",
     relatedId: trip._id,
   });
+
+  // 7. Emit trip:created for real-time dashboard update (shipper joins user room)
+  const populatedTrip = await Trip.findById(trip._id)
+    .populate("job", "title pickupLocation deliveryLocation price")
+    .populate("transporter", "name phone")
+    .populate("truck", "truckNumber");
+  if (global.io) {
+    global.io.to(job.shipper.toString()).emit("trip:created", { trip: populatedTrip });
+  }
 
   res.status(200).json({
     success: true,

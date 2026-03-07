@@ -1,25 +1,45 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { getMyTrips, updateTripStatus, updateLiveLocation } from "../services/tripService";
+import { getReturnLoads } from "../services/jobService";
 import { formatDate } from "../utils/formatDate";
 import Loader from "../components/common/Loader";
-import { MapPin, Navigation, ArrowRightCircle, Map } from "lucide-react";
+import { MapPin, Navigation, ArrowRightCircle, Map, Package } from "lucide-react";
 
 export default function MyTrips() {
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
   const [locationLoading, setLocationLoading] = useState(null);
+  const [pickupNearby, setPickupNearby] = useState({ loading: false, data: [], dropLocation: "", error: false, expanded: false });
 
   useEffect(() => {
     getMyTrips()
       .then((res) => {
         const list = Array.isArray(res?.data) ? res.data : [];
         setTrips(list);
+        return list;
       })
       .catch(() => setTrips([]))
       .finally(() => setLoading(false));
   }, []);
+
+  // Fetch Pickup Nearby when trips load - use most recent completed/delivered trip's drop location
+  useEffect(() => {
+    const latestCompleted = trips
+      .filter((t) => (t.status === "completed" || t.status === "delivered") && t.job)
+      .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))[0];
+    if (!latestCompleted) return;
+    const jobId = latestCompleted.job?._id || latestCompleted.job;
+    if (!jobId) return;
+    setPickupNearby((p) => ({ ...p, loading: true, error: false }));
+    getReturnLoads(jobId)
+      .then((res) => {
+        const list = Array.isArray(res?.data) ? res.data : [];
+        setPickupNearby({ loading: false, data: list, dropLocation: res?.deliveryLocation || latestCompleted.job?.deliveryLocation, error: false });
+      })
+      .catch(() => setPickupNearby((p) => ({ ...p, loading: false, data: [], error: true })));
+  }, [trips]);
 
   const handleStatusUpdate = async (tripId, status) => {
     setActionLoading(tripId);
@@ -96,6 +116,8 @@ export default function MyTrips() {
 
   if (loading) return <Loader />;
 
+  const hasCompletedTrip = trips.some((t) => (t.status === "completed" || t.status === "delivered") && t.job);
+
   const statusFlow = {
     pending: "accepted",
     accepted: "in_transit",
@@ -106,8 +128,85 @@ export default function MyTrips() {
   return (
     <div className="animate-in">
       <div className="page-header">
-        <h1 className="page-title">My Trips</h1>
+        <div>
+          <h1 className="page-title">My Trips</h1>
+          <p className="page-subtitle">Manage your trips and find pickups nearby after delivery</p>
+        </div>
       </div>
+
+      {/* Pickup Nearby - button to expand, based on latest drop location */}
+      {hasCompletedTrip && (
+        <div style={{ marginBottom: "1.5rem" }}>
+          {!pickupNearby.expanded ? (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setPickupNearby((p) => ({ ...p, expanded: true }))}
+              style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+            >
+              <Package size={18} style={{ color: "var(--color-success)" }} />
+              Pickup Nearby
+            </button>
+          ) : (
+            <div className="card" style={{ marginBottom: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <Package size={20} style={{ color: "var(--color-success)" }} />
+                  <h2 style={{ fontSize: "1rem", fontWeight: 600, margin: 0 }}>Pickup Nearby</h2>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => setPickupNearby((p) => ({ ...p, expanded: false }))}
+                >
+                  Hide
+                </button>
+              </div>
+              <p style={{ fontSize: "0.8125rem", color: "var(--color-text-muted)", marginBottom: "1rem" }}>
+                Jobs near your last drop location
+              </p>
+              {pickupNearby.loading ? (
+                <p style={{ fontSize: "0.875rem", color: "var(--color-text-muted)" }}>Loading...</p>
+              ) : pickupNearby.error ? (
+                <p style={{ fontSize: "0.875rem", color: "var(--color-error)" }}>Could not load pickups nearby.</p>
+              ) : !pickupNearby.data?.length ? (
+                <p style={{ fontSize: "0.875rem", color: "var(--color-text-muted)" }}>No pickups nearby right now.</p>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  {pickupNearby.data.map((job) => (
+                    <div
+                      key={job._id}
+                      className="card card-hover"
+                      style={{
+                        padding: "0.75rem 1rem",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "0.25rem",
+                        background: "var(--color-surface)",
+                      }}
+                    >
+                      <div style={{ fontWeight: 600, fontSize: "0.9375rem" }}>{job.title}</div>
+                      <div style={{ fontSize: "0.8125rem", color: "var(--color-text-muted)" }}>
+                        {job.pickupLocation} → {job.deliveryLocation}
+                      </div>
+                      <div style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)" }}>
+                        {job.requiredCapacity ? `${job.requiredCapacity} tons • ` : ""}₹{job.price}
+                      </div>
+                      <Link
+                        to={`/jobs/${job._id}`}
+                        className="btn btn-primary btn-sm"
+                        style={{ marginTop: "0.5rem", alignSelf: "flex-start" }}
+                      >
+                        Accept Return Load
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {trips.length === 0 ? (
         <div className="card">
@@ -130,6 +229,13 @@ export default function MyTrips() {
                   </div>
                   <div className="list-item-meta">
                     Truck: {t.truck?.truckNumber} • {formatDate(t.createdAt)}
+                    {t.status === "completed" && (
+                      <span style={{ marginLeft: "0.5rem" }}>
+                        • <span className={`badge badge-${t.paymentStatus === "paid" ? "paid" : "pending"}`}>
+                          {t.paymentStatus === "paid" ? "Paid" : "Yet to Pay"}
+                        </span>
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="list-item-actions">

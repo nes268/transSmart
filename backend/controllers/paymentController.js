@@ -1,5 +1,6 @@
 const Payment = require("../models/Payment");
 const Job = require("../models/Job");
+const { createInvoice, updateInvoiceOnPaid } = require("./invoiceController");
 const asyncHandler = require("../middleware/asyncHandler");
 const AppError = require("../utils/AppError");
 const sendNotification = require("../utils/sendNotification");
@@ -37,6 +38,8 @@ exports.createPayment = asyncHandler(async (req, res, next) => {
     amount: job.price,
   });
 
+  await createInvoice(payment);
+
   const populated = await Payment.findById(payment._id).populate("job");
 
   // Real-time: notify both shipper and transporter instantly
@@ -69,6 +72,8 @@ exports.markAsPaid = asyncHandler(async (req, res, next) => {
   payment.paidAt = new Date();
 
   await payment.save();
+
+  await updateInvoiceOnPaid(payment);
 
   const populated = await Payment.findById(payment._id).populate("job");
 

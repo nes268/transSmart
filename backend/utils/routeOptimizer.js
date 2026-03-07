@@ -1,21 +1,34 @@
 /**
- * Route optimization using OSRM (routing) + Nominatim (geocoding)
- * No API keys required - uses OpenStreetMap services
+ * Route optimization: OSRM
+ * Geocoding: Nominatim
  */
 
 const NOMINATIM_BASE = "https://nominatim.openstreetmap.org/search";
 const OSRM_BASE = "https://router.project-osrm.org/route/v1/driving";
 
-async function geocode(place) {
-  const url = `${NOMINATIM_BASE}?q=${encodeURIComponent(place)}&format=json&limit=1`;
+async function geocodeWithNominatim(query) {
+  const url = `${NOMINATIM_BASE}?q=${encodeURIComponent(query)}&format=json&limit=1`;
   const res = await fetch(url, {
     headers: { "User-Agent": "TransSmart/1.0" }
   });
   const data = await res.json();
-  if (!data || data.length === 0) {
-    throw new Error(`Could not geocode: ${place}`);
-  }
+  if (!data || data.length === 0) return null;
   return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+}
+
+async function geocode(place) {
+  let result = await geocodeWithNominatim(place);
+  if (result) return result;
+  // Fallback: try shorter queries (remove first comma-separated part)
+  let query = place.trim();
+  while (query.includes(",")) {
+    query = query.replace(/^[^,]+\s*,\s*/, "").trim();
+    if (query) {
+      result = await geocodeWithNominatim(query);
+      if (result) return result;
+    }
+  }
+  throw new Error(`Could not geocode: ${place}`);
 }
 
 async function getRoute(pickupCoords, dropCoords) {
@@ -31,7 +44,7 @@ async function getRoute(pickupCoords, dropCoords) {
     distance: route.distance / 1000,
     duration: Math.round(route.duration),
     geometry: route.geometry,
-    legs: route.legs || []
+    legs: route.legs || [],
   };
 }
 

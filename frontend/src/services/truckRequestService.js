@@ -1,12 +1,22 @@
 import api from "./api";
 
 export const createTruckRequest = async (truckId, jobId, message = "") => {
-  const res = await api.post("/truck-requests", { truckId, jobId, message });
+  const res = await api.post("/truck-requests", {
+    truckId,
+    jobId,
+    job: jobId,
+    message,
+  });
   return res.data;
 };
 
 export const getMyTruckRequests = async () => {
   const res = await api.get("/truck-requests");
+  return res.data;
+};
+
+export const getTruckRequest = async (id) => {
+  const res = await api.get(`/truck-requests/${id}`);
   return res.data;
 };
 

@@ -6,6 +6,7 @@ import { useSocket } from "../context/SocketContext";
 import { formatDate } from "../utils/formatDate";
 import Loader from "../components/common/Loader";
 import { CreditCard, PlusCircle, IndianRupee } from "lucide-react";
+import RazorpayCheckoutModal from "../components/payment/RazorpayCheckoutModal";
 
 export default function PaymentHistory() {
   const { user } = useAuth();
@@ -13,8 +14,7 @@ export default function PaymentHistory() {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
-  const [showMarkPaid, setShowMarkPaid] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState("upi");
+  const [showPayModal, setShowPayModal] = useState(null);
   const [jobsNeedingPayment, setJobsNeedingPayment] = useState([]);
   const [createLoading, setCreateLoading] = useState(null);
 
@@ -48,7 +48,13 @@ export default function PaymentHistory() {
           next[idx] = payment;
           return next;
         }
-        return [payment, ...prev];
+        const jobId = (payment.job?._id || payment.job)?.toString?.();
+        const withoutDup = prev.filter((p) => {
+          if (p._id === payment._id) return false;
+          const pJobId = (p.job?._id || p.job)?.toString?.();
+          return !jobId || pJobId !== jobId;
+        });
+        return [payment, ...withoutDup];
       });
     };
     socket.on("payment:created", handler);
@@ -69,7 +75,13 @@ export default function PaymentHistory() {
           next[idx] = payment;
           return next;
         }
-        return [payment, ...prev];
+        const jobId = (payment.job?._id || payment.job)?.toString?.();
+        const withoutDup = prev.filter((p) => {
+          if (p._id === payment._id) return false;
+          const pJobId = (p.job?._id || p.job)?.toString?.();
+          return !jobId || pJobId !== jobId;
+        });
+        return [payment, ...withoutDup];
       });
     };
     socket.on("payment:paid", handler);
@@ -89,12 +101,11 @@ export default function PaymentHistory() {
     }
   }, [user?.role]);
 
-  const handleMarkPaid = async () => {
-    if (!showMarkPaid) return;
-    setActionLoading(showMarkPaid);
+  const handlePaymentSuccess = async () => {
+    if (!showPayModal) return;
+    setActionLoading(showPayModal);
     try {
-      const res = await markAsPaid(showMarkPaid, paymentMethod);
-      setShowMarkPaid(null);
+      const res = await markAsPaid(showPayModal, "card");
       const payment = res?.data;
       if (payment) {
         setPayments((prev) =>
@@ -105,8 +116,10 @@ export default function PaymentHistory() {
       }
     } catch (err) {
       console.error(err);
+      load();
     } finally {
       setActionLoading(null);
+      setShowPayModal(null);
     }
   };
 
@@ -116,7 +129,14 @@ export default function PaymentHistory() {
       const res = await createPayment(jobId);
       const payment = res?.data;
       if (payment) {
-        setPayments((prev) => [payment, ...prev]);
+        setPayments((prev) => {
+          const withoutDup = prev.filter((p) => p._id !== payment._id);
+          const jobId = (payment.job?._id || payment.job)?.toString?.();
+          const filtered = jobId
+            ? withoutDup.filter((p) => (p.job?._id || p.job)?.toString?.() !== jobId)
+            : withoutDup;
+          return [payment, ...filtered];
+        });
       } else {
         load();
       }
@@ -129,9 +149,9 @@ export default function PaymentHistory() {
 
   if (loading) return <Loader />;
 
-  const paidJobIds = payments.map((p) => p.job?._id);
+  const paidJobIds = [...new Set(payments.map((p) => (p.job?._id || p.job)?.toString?.()).filter(Boolean))];
   const jobsWithoutPayment = jobsNeedingPayment.filter(
-    (j) => !paidJobIds.includes(j._id)
+    (j) => !paidJobIds.includes(j._id?.toString?.())
   );
 
   return (
@@ -200,11 +220,16 @@ export default function PaymentHistory() {
                   </span>
                   {p.status === "pending" && user?.role === "shipper" && (
                     <button
+                      type="button"
                       className="btn btn-primary btn-sm"
                       disabled={actionLoading === p._id}
-                      onClick={() => setShowMarkPaid(p._id)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setShowPayModal(p._id);
+                      }}
                     >
-                      Mark Paid
+                      Pay
                     </button>
                   )}
                 </div>
@@ -214,30 +239,13 @@ export default function PaymentHistory() {
         </div>
       )}
 
-      {showMarkPaid && (
-        <div className="modal-overlay" onClick={() => setShowMarkPaid(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h3 className="modal-title">Mark as Paid</h3>
-            <div className="form-group">
-              <label>Payment Method</label>
-              <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
-                <option value="upi">UPI</option>
-                <option value="card">Card</option>
-                <option value="netbanking">Net Banking</option>
-                <option value="cash">Cash</option>
-              </select>
-            </div>
-            <div style={{ display: "flex", gap: "0.5rem" }}>
-              <button className="btn btn-primary" disabled={actionLoading} onClick={handleMarkPaid}>
-                {actionLoading ? "Updating..." : "Confirm"}
-              </button>
-              <button className="btn btn-secondary" onClick={() => setShowMarkPaid(null)}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <RazorpayCheckoutModal
+        open={!!showPayModal}
+        onClose={() => setShowPayModal(null)}
+        amount={payments.find((p) => p._id === showPayModal)?.amount ?? ""}
+        description={payments.find((p) => p._id === showPayModal)?.job?.title ? `Job: ${payments.find((p) => p._id === showPayModal).job.title}` : null}
+        onSuccess={handlePaymentSuccess}
+      />
     </div>
   );
 }

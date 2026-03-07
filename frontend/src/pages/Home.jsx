@@ -1,20 +1,34 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { Link } from "react-router-dom";
-import { Truck, MapPin, Shield, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
-import CursorTip from "../components/common/CursorTip";
 
 const fadeUp = {
-  initial: { opacity: 0, y: 24 },
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+};
+
+const letterContainer = {
+  initial: { opacity: 0 },
+  animate: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.032,
+      delayChildren: 0.08,
+    },
+  },
+};
+
+const letter = {
+  initial: { opacity: 0, y: 12 },
   animate: { opacity: 1, y: 0 },
 };
 
 const stagger = {
   animate: {
     transition: {
-      staggerChildren: 0.08,
-      delayChildren: 0.1,
+      staggerChildren: 0.06,
+      delayChildren: 0.08,
     },
   },
 };
@@ -38,7 +52,6 @@ export default function Home() {
 
   return (
     <div className="landing-page">
-      <CursorTip />
       <motion.div
         className="landing-hero"
         initial="initial"
@@ -46,11 +59,21 @@ export default function Home() {
         variants={stagger}
       >
         <motion.div
-          className="landing-logo"
-          variants={fadeUp}
-          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          className="landing-brand"
+          variants={letterContainer}
+          initial="initial"
+          animate="animate"
         >
-          <Truck size={28} />
+          {"TransSmart".split("").map((char, i) => (
+            <motion.span
+              key={i}
+              className={`landing-brand-char ${i >= 5 ? "accent" : ""}`}
+              variants={letter}
+              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            >
+              {char}
+            </motion.span>
+          ))}
         </motion.div>
         <motion.h1
           className="landing-title"
@@ -95,37 +118,25 @@ export default function Home() {
       >
         {[
           {
-            icon: MapPin,
             title: "Live Tracking",
             desc: "Track shipments in real-time with GPS updates and live map views",
-            iconStyle: { background: "var(--color-primary-light)", color: "var(--color-primary)" },
           },
           {
-            icon: Sparkles,
             title: "AI Matching",
             desc: "Intelligent transporter-job matching for optimal delivery outcomes",
-            iconStyle: { background: "var(--color-accent-light)", color: "var(--color-accent)" },
           },
           {
-            icon: Shield,
             title: "Secure Payments",
             desc: "Transparent payment tracking with multiple payment methods supported",
-            iconStyle: { background: "var(--color-success-light)", color: "var(--color-success)" },
           },
-        ].map(({ icon: Icon, title, desc, iconStyle }) => (
+        ].map(({ title, desc }) => (
           <motion.div
             key={title}
             className="landing-feature-card"
             variants={fadeUp}
-            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            whileHover={{
-              y: -4,
-              transition: { duration: 0.2 },
-            }}
+            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            whileHover={{ y: -2, transition: { duration: 0.15 } }}
           >
-            <div className="landing-feature-icon" style={iconStyle}>
-              <Icon size={20} />
-            </div>
             <div className="landing-feature-title">{title}</div>
             <div className="landing-feature-desc">{desc}</div>
           </motion.div>

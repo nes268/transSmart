@@ -3,25 +3,18 @@ import { Link } from "react-router-dom";
 import { getShipperDashboard } from "../services/dashboardService";
 import { getShipperTrips } from "../services/tripService";
 import { getMyPayments, createPayment, markAsPaid } from "../services/paymentService";
+import { createJob } from "../services/jobService";
 import { formatDate } from "../utils/formatDate";
 import Loader from "../components/common/Loader";
-import {
-  Package,
-  Clock,
-  CheckCircle2,
-  Loader2,
-  PlusCircle,
-  MapPin,
-  Truck,
-  CreditCard,
-  Bell,
-  ArrowRight,
-  Phone,
-  IndianRupee,
-} from "lucide-react";
 import ChatbotWidget from "../components/chat/ChatbotWidget";
+import RazorpayCheckoutModal from "../components/payment/RazorpayCheckoutModal";
+import { useAuth } from "../hooks/useAuth";
+import { useSocket } from "../context/SocketContext";
+import { MapPin } from "lucide-react";
 
 export default function ShipperDashboard() {
+  const { user } = useAuth();
+  const { socket } = useSocket();
   const [data, setData] = useState(null);
   const [trips, setTrips] = useState([]);
   const [payments, setPayments] = useState([]);
@@ -29,8 +22,15 @@ export default function ShipperDashboard() {
   const [error, setError] = useState("");
   const [createLoading, setCreateLoading] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
-  const [showMarkPaid, setShowMarkPaid] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState("upi");
+  const [showPayModal, setShowPayModal] = useState(null);
+  const [showCreateJob, setShowCreateJob] = useState(false);
+  const [jobForm, setJobForm] = useState({
+    title: "", description: "", pickupLocation: "", deliveryLocation: "",
+    requiredCapacity: "", preferredDeliveryDate: "", price: "",
+  });
+  const [jobFormError, setJobFormError] = useState("");
+  const [jobFormLoading, setJobFormLoading] = useState(false);
+  const [jobFilter, setJobFilter] = useState("all");
 
   const loadData = () => {
     Promise.all([getShipperDashboard(), getShipperTrips(), getMyPayments()])
@@ -51,6 +51,28 @@ export default function ShipperDashboard() {
     loadData();
   }, []);
 
+  useEffect(() => {
+    if (socket?.connected && user?._id) {
+      socket.emit("joinUserRoom", user._id);
+    }
+  }, [socket?.connected, user?._id]);
+
+  useEffect(() => {
+    if (!socket?.connected || !user?._id) return;
+    const handler = ({ trip }) => {
+      if (trip) {
+        setTrips((prev) => {
+          const exists = prev.some((t) => t._id === trip._id);
+          if (exists) return prev.map((t) => (t._id === trip._id ? trip : t));
+          return [trip, ...prev];
+        });
+        loadData();
+      }
+    };
+    socket.on("trip:created", handler);
+    return () => socket.off("trip:created", handler);
+  }, [socket?.connected, user?._id]);
+
   if (loading) return <Loader />;
   if (error) return <div className="alert alert-error">{error}</div>;
   if (!data) return <div className="alert alert-error">Failed to load dashboard</div>;
@@ -58,8 +80,8 @@ export default function ShipperDashboard() {
   const { stats, jobs } = data;
 
   const completedJobs = (jobs || []).filter((j) => j.status === "completed");
-  const paidJobIds = (payments || []).map((p) => p.job?._id);
-  const jobsNeedingPayment = completedJobs.filter((j) => !paidJobIds.includes(j._id));
+  const paidJobIds = [...new Set((payments || []).map((p) => (p.job?._id || p.job)?.toString?.()).filter(Boolean))];
+  const jobsNeedingPayment = completedJobs.filter((j) => !paidJobIds.includes(j._id?.toString?.()));
   const pendingPayments = (payments || []).filter((p) => p.status === "pending");
 
   const handleCreatePayment = async (jobId, e) => {
@@ -70,7 +92,15 @@ export default function ShipperDashboard() {
       const res = await createPayment(jobId);
       const payment = res?.data;
       if (payment) {
-        setPayments((prev) => [payment, ...(prev || [])]);
+        setPayments((prev) => {
+          const list = prev || [];
+          const withoutDup = list.filter((p) => p._id !== payment._id);
+          const jobId = (payment.job?._id || payment.job)?.toString?.();
+          const filtered = jobId
+            ? withoutDup.filter((p) => (p.job?._id || p.job)?.toString?.() !== jobId)
+            : withoutDup;
+          return [payment, ...filtered];
+        });
       } else {
         loadData();
       }
@@ -81,12 +111,11 @@ export default function ShipperDashboard() {
     }
   };
 
-  const handleMarkPaid = async () => {
-    if (!showMarkPaid) return;
-    setActionLoading(showMarkPaid);
+  const handlePaymentSuccess = async () => {
+    if (!showPayModal) return;
+    setActionLoading(showPayModal);
     try {
-      const res = await markAsPaid(showMarkPaid, paymentMethod);
-      setShowMarkPaid(null);
+      const res = await markAsPaid(showPayModal, "card");
       const payment = res?.data;
       if (payment) {
         setPayments((prev) =>
@@ -97,8 +126,36 @@ export default function ShipperDashboard() {
       }
     } catch (err) {
       console.error(err);
+      loadData();
     } finally {
       setActionLoading(null);
+      setShowPayModal(null);
+    }
+  };
+
+  const handleCreateJobSubmit = async (e) => {
+    e.preventDefault();
+    setJobFormError("");
+    setJobFormLoading(true);
+    try {
+      await createJob({
+        title: jobForm.title,
+        description: jobForm.description,
+        pickupLocation: jobForm.pickupLocation,
+        deliveryLocation: jobForm.deliveryLocation,
+        price: parseFloat(jobForm.price),
+        requiredCapacity: jobForm.requiredCapacity ? parseFloat(jobForm.requiredCapacity) : 0,
+        preferredDeliveryDate: jobForm.preferredDeliveryDate || null,
+      });
+      setShowCreateJob(false);
+      setJobForm({ title: "", description: "", pickupLocation: "", deliveryLocation: "", requiredCapacity: "", preferredDeliveryDate: "", price: "" });
+      loadData();
+    } catch (err) {
+      setJobFormError(
+        err.response?.data?.message || err.response?.data?.errors?.[0]?.msg || "Failed to create job."
+      );
+    } finally {
+      setJobFormLoading(false);
     }
   };
 
@@ -109,75 +166,55 @@ export default function ShipperDashboard() {
           <h1 className="page-title">Dashboard</h1>
           <p className="page-subtitle">Overview of your shipping activity</p>
         </div>
-        <Link to="/shipper/jobs/new" className="btn btn-primary">
-          <PlusCircle size={16} />
+        <button className="btn btn-primary" onClick={() => setShowCreateJob(true)}>
           Create Job
-        </Link>
+        </button>
       </div>
 
       <div className="stat-grid" style={{ marginBottom: "2rem" }}>
         <div className="stat-card stat-card-purple">
           <div className="stat-card-header">
             <span className="stat-card-label">Total Jobs</span>
-            <div className="stat-card-icon"><Package size={18} /></div>
           </div>
           <div className="stat-card-value">{stats.totalJobs}</div>
         </div>
         <div className="stat-card stat-card-cyan">
           <div className="stat-card-header">
             <span className="stat-card-label">Open</span>
-            <div className="stat-card-icon cyan"><Clock size={18} /></div>
           </div>
           <div className="stat-card-value">{stats.openJobs}</div>
         </div>
         <div className="stat-card stat-card-amber">
           <div className="stat-card-header">
             <span className="stat-card-label">Accepted</span>
-            <div className="stat-card-icon amber"><Loader2 size={18} /></div>
           </div>
           <div className="stat-card-value">{stats.acceptedJobs}</div>
         </div>
         <div className="stat-card stat-card-green">
           <div className="stat-card-header">
             <span className="stat-card-label">Completed</span>
-            <div className="stat-card-icon green"><CheckCircle2 size={18} /></div>
           </div>
           <div className="stat-card-value">{stats.completedJobs}</div>
         </div>
         <div className="stat-card stat-card-cyan">
           <div className="stat-card-header">
             <span className="stat-card-label">Total Spending</span>
-            <div className="stat-card-icon cyan"><IndianRupee size={18} /></div>
           </div>
           <div className="stat-card-value">₹{stats.totalSpending ?? 0}</div>
         </div>
       </div>
 
       <div className="quick-actions" style={{ marginBottom: "2rem" }}>
-        <Link to="/shipper/trucks" className="btn btn-secondary btn-sm">
-          <Truck size={14} /> Browse Trucks
-        </Link>
-        <Link to="/shipper/trips" className="btn btn-secondary btn-sm">
-          <MapPin size={14} /> My Trips
-        </Link>
-        <Link to="/payments" className="btn btn-secondary btn-sm">
-          <CreditCard size={14} /> Payments
-        </Link>
-        <Link to="/notifications" className="btn btn-secondary btn-sm">
-          <Bell size={14} /> Notifications
-        </Link>
+        <Link to="/shipper/trucks" className="btn btn-secondary btn-sm">Browse Trucks</Link>
+        <Link to="/payments" className="btn btn-secondary btn-sm">Payments</Link>
+        <Link to="/notifications" className="btn btn-secondary btn-sm">Notifications</Link>
       </div>
 
       {(jobsNeedingPayment.length > 0 || pendingPayments.length > 0) && (
         <div className="card" style={{ marginBottom: "2rem" }}>
           <div className="section-header" style={{ marginBottom: "1rem" }}>
-            <h2 className="section-title">
-              <CreditCard size={18} style={{ marginRight: "0.5rem", verticalAlign: "middle" }} />
-              Make Payment
-            </h2>
-            <Link to="/payments" className="btn btn-ghost btn-sm">
-              View all <ArrowRight size={14} />
-            </Link>
+            <h2 className="section-title">Make Payment</h2>
+            <Link to="/payments" className="btn btn-ghost btn-sm">View all</Link>
           </div>
           <p style={{ color: "var(--color-text-muted)", fontSize: "0.875rem", marginBottom: "1rem" }}>
             Pay transporters for completed jobs
@@ -191,16 +228,13 @@ export default function ShipperDashboard() {
                   <div key={j._id} className="list-item" style={{ padding: "0.5rem 0" }}>
                     <div>
                       <span className="list-item-title">{j.title}</span>
-                      <span className="list-item-price" style={{ marginLeft: "0.75rem" }}>
-                        <IndianRupee size={14} style={{ verticalAlign: "middle" }} />{j.price}
-                      </span>
+                      <span className="list-item-price" style={{ marginLeft: "0.75rem" }}>₹{j.price}</span>
                     </div>
                     <button
                       className="btn btn-primary btn-sm"
                       disabled={createLoading === j._id}
                       onClick={(e) => handleCreatePayment(j._id, e)}
                     >
-                      <PlusCircle size={14} />
                       {createLoading === j._id ? "Creating..." : "Create & Pay"}
                     </button>
                   </div>
@@ -211,25 +245,26 @@ export default function ShipperDashboard() {
 
           {pendingPayments.length > 0 && (
             <div>
-              <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--color-text-muted)", marginBottom: "0.5rem" }}>Mark as paid</div>
+              <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--color-text-muted)", marginBottom: "0.5rem" }}>Pay</div>
               <div className="list-stack">
                 {pendingPayments.map((p) => (
                   <div key={p._id} className="list-item" style={{ padding: "0.5rem 0" }}>
                     <div>
                       <span className="list-item-title">
-                        <IndianRupee size={14} style={{ verticalAlign: "middle", marginRight: "0.25rem" }} />
-                        {p.amount} — {p.job?.title || "Job"}
+                        ₹{p.amount} — {p.job?.title || "Job"}
                       </span>
                     </div>
                     <button
+                      type="button"
                       className="btn btn-primary btn-sm"
                       disabled={actionLoading === p._id}
                       onClick={(e) => {
                         e?.preventDefault?.();
-                        setShowMarkPaid(p._id);
+                        e?.stopPropagation?.();
+                        setShowPayModal(p._id);
                       }}
                     >
-                      Mark Paid
+                      Pay
                     </button>
                   </div>
                 ))}
@@ -239,41 +274,75 @@ export default function ShipperDashboard() {
         </div>
       )}
 
-      {showMarkPaid && (
-        <div className="modal-overlay" onClick={() => setShowMarkPaid(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h3 className="modal-title">Mark as Paid</h3>
-            <div className="form-group">
-              <label>Payment Method</label>
-              <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
-                <option value="upi">UPI</option>
-                <option value="card">Card</option>
-                <option value="netbanking">Net Banking</option>
-                <option value="cash">Cash</option>
-              </select>
+      {showCreateJob && (
+        <div className="modal-overlay" onClick={() => setShowCreateJob(false)}>
+          <div className="modal-content create-job-modal" onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <h3 className="modal-title" style={{ marginBottom: 0 }}>Create New Job</h3>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowCreateJob(false)} style={{ padding: "0.25rem" }}>×</button>
             </div>
-            <div style={{ display: "flex", gap: "0.5rem" }}>
-              <button className="btn btn-primary" disabled={actionLoading} onClick={handleMarkPaid}>
-                {actionLoading ? "Updating..." : "Confirm"}
-              </button>
-              <button className="btn btn-secondary" onClick={() => setShowMarkPaid(null)}>
-                Cancel
-              </button>
+            <div className="create-job-modal-scroll">
+              {jobFormError && <div className="alert alert-error">{jobFormError}</div>}
+              <form onSubmit={handleCreateJobSubmit}>
+                <div className="form-group">
+                  <label>Job Title</label>
+                  <input type="text" value={jobForm.title} onChange={(e) => setJobForm((f) => ({ ...f, title: e.target.value }))} placeholder="e.g. Furniture delivery" required />
+                </div>
+                <div className="form-group">
+                  <label>Description</label>
+                  <textarea value={jobForm.description} onChange={(e) => setJobForm((f) => ({ ...f, description: e.target.value }))} placeholder="Describe the shipment..." rows={2} required />
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                  <div className="form-group">
+                    <label>Pickup</label>
+                    <input type="text" value={jobForm.pickupLocation} onChange={(e) => setJobForm((f) => ({ ...f, pickupLocation: e.target.value }))} placeholder="Address" required />
+                  </div>
+                  <div className="form-group">
+                    <label>Drop</label>
+                    <input type="text" value={jobForm.deliveryLocation} onChange={(e) => setJobForm((f) => ({ ...f, deliveryLocation: e.target.value }))} placeholder="Address" required />
+                  </div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                  <div className="form-group">
+                    <label>Capacity (tons)</label>
+                    <input type="number" value={jobForm.requiredCapacity} onChange={(e) => setJobForm((f) => ({ ...f, requiredCapacity: e.target.value }))} placeholder="0" min="0" step="0.1" />
+                  </div>
+                  <div className="form-group">
+                    <label>Budget (₹)</label>
+                    <input type="number" value={jobForm.price} onChange={(e) => setJobForm((f) => ({ ...f, price: e.target.value }))} placeholder="0" min="1" step="0.01" required />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Preferred Delivery Date</label>
+                  <input type="date" value={jobForm.preferredDeliveryDate} onChange={(e) => setJobForm((f) => ({ ...f, preferredDeliveryDate: e.target.value }))} min={new Date().toISOString().split("T")[0]} />
+                </div>
+                <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
+                  <button type="submit" className="btn btn-primary" disabled={jobFormLoading}>
+                    {jobFormLoading ? "Creating..." : "Create Job"}
+                  </button>
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowCreateJob(false)}>Cancel</button>
+                </div>
+              </form>
             </div>
           </div>
         </div>
       )}
 
+      <RazorpayCheckoutModal
+        open={!!showPayModal}
+        onClose={() => setShowPayModal(null)}
+        amount={pendingPayments.find((p) => p._id === showPayModal)?.amount ?? ""}
+        description={pendingPayments.find((p) => p._id === showPayModal)?.job?.title ? `Job: ${pendingPayments.find((p) => p._id === showPayModal).job.title}` : null}
+        onSuccess={handlePaymentSuccess}
+      />
+
       <div className="section-header">
         <h2 className="section-title">Active Trips</h2>
-        <Link to="/shipper/trips" className="btn btn-ghost btn-sm">
-          View all <ArrowRight size={14} />
-        </Link>
+        <Link to="/shipper/trips" className="btn btn-ghost btn-sm">View all</Link>
       </div>
       {trips.filter((t) => t.status !== "completed").length === 0 ? (
         <div className="card" style={{ marginBottom: "2rem" }}>
           <div className="empty-state">
-            <MapPin size={32} className="empty-state-icon" />
             <p className="empty-state-text">
               No active trips. Trips appear when a transporter accepts your job.
             </p>
@@ -292,7 +361,7 @@ export default function ShipperDashboard() {
                       {t.job?.title} → {t.transporter?.name}
                       {t.transporter?.phone && (
                         <span style={{ fontWeight: 400, color: "var(--color-text-muted)", marginLeft: "0.5rem" }}>
-                          • <Phone size={12} style={{ display: "inline", verticalAlign: "middle" }} /> {t.transporter.phone}
+                          • {t.transporter.phone}
                         </span>
                       )}
                     </div>
@@ -312,44 +381,73 @@ export default function ShipperDashboard() {
         </div>
       )}
 
-      <div className="section-header">
+      <div className="section-header" style={{ flexWrap: "wrap", gap: "0.75rem" }}>
         <h2 className="section-title">My Jobs</h2>
-        <Link to="/shipper/jobs/new" className="btn btn-primary btn-sm">
-          <PlusCircle size={14} /> New Job
-        </Link>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+          <div className="tab-group" style={{ margin: 0, padding: "0.25rem" }}>
+            {["all", "open", "accepted", "completed"].map((f) => (
+              <button
+                key={f}
+                type="button"
+                className={`tab-btn${jobFilter === f ? " active" : ""}`}
+                onClick={() => setJobFilter(f)}
+              >
+                {f.charAt(0).toUpperCase() + f.slice(1)}
+              </button>
+            ))}
+          </div>
+          <Link to="/shipper/trips" className="btn btn-primary btn-sm">
+            Track
+          </Link>
+        </div>
       </div>
 
       {jobs.length === 0 ? (
         <div className="card">
           <div className="empty-state">
-            <Package size={32} className="empty-state-icon" />
             <p className="empty-state-text">
               No jobs yet. Create your first job to get started.
             </p>
-            <Link to="/shipper/jobs/new" className="btn btn-primary" style={{ marginTop: "0.5rem" }}>
-              <PlusCircle size={16} /> Create Job
-            </Link>
+            <button className="btn btn-primary" style={{ marginTop: "0.5rem" }} onClick={() => setShowCreateJob(true)}>
+              Create Job
+            </button>
           </div>
         </div>
       ) : (
         <div className="list-stack">
-          {jobs.map((job) => (
-            <Link key={job._id} to={`/jobs/${job._id}`} className="card card-hover card-interactive">
-              <div className="list-item">
-                <div>
-                  <div className="list-item-title">{job.title}</div>
-                  <div className="list-item-sub">
-                    {job.pickupLocation} → {job.deliveryLocation}
+          {jobs
+            .filter((j) => jobFilter === "all" || j.status === jobFilter)
+            .map((job) => {
+              const tripForJob = trips.find(
+                (t) =>
+                  (t.job?._id || t.job)?.toString?.() === job._id?.toString?.() &&
+                  ["accepted", "in_transit", "delivered"].includes(t.status)
+              );
+              return (
+                <div key={job._id} className="card card-hover">
+                  <div className="list-item">
+                    <Link to={`/jobs/${job._id}`} style={{ textDecoration: "none", color: "inherit", flex: 1, minWidth: 0 }}>
+                      <div>
+                        <div className="list-item-title">{job.title}</div>
+                        <div className="list-item-sub">
+                          {job.pickupLocation} → {job.deliveryLocation}
+                        </div>
+                        <div className="list-item-meta">{formatDate(job.createdAt)}</div>
+                      </div>
+                    </Link>
+                    <div className="list-item-actions">
+                      {tripForJob && (
+                        <Link to={`/trips/${tripForJob._id}`} className="btn btn-primary btn-sm">
+                          <MapPin size={14} /> Track
+                        </Link>
+                      )}
+                      <span className={`badge badge-${job.status}`}>{job.status}</span>
+                      <span className="list-item-price">₹{job.price}</span>
+                    </div>
                   </div>
-                  <div className="list-item-meta">{formatDate(job.createdAt)}</div>
                 </div>
-                <div className="list-item-actions">
-                  <span className={`badge badge-${job.status}`}>{job.status}</span>
-                  <span className="list-item-price">₹{job.price}</span>
-                </div>
-              </div>
-            </Link>
-          ))}
+              );
+            })}
         </div>
       )}
 

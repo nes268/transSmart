@@ -1,12 +1,6 @@
 import { useState, useEffect } from "react";
 import { getPlatformStats } from "../services/adminService";
 import Loader from "../components/common/Loader";
-import {
-  Users,
-  Package,
-  MapPin,
-  IndianRupee,
-} from "lucide-react";
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
@@ -38,28 +32,24 @@ export default function AdminDashboard() {
         <div className="stat-card stat-card-purple">
           <div className="stat-card-header">
             <span className="stat-card-label">Total Users</span>
-            <div className="stat-card-icon"><Users size={18} /></div>
           </div>
           <div className="stat-card-value">{stats.totalUsers}</div>
         </div>
         <div className="stat-card stat-card-cyan">
           <div className="stat-card-header">
             <span className="stat-card-label">Total Jobs</span>
-            <div className="stat-card-icon cyan"><Package size={18} /></div>
           </div>
           <div className="stat-card-value">{stats.totalJobs}</div>
         </div>
         <div className="stat-card stat-card-amber">
           <div className="stat-card-header">
             <span className="stat-card-label">Total Trips</span>
-            <div className="stat-card-icon amber"><MapPin size={18} /></div>
           </div>
           <div className="stat-card-value">{stats.totalTrips}</div>
         </div>
         <div className="stat-card stat-card-green">
           <div className="stat-card-header">
             <span className="stat-card-label">Total Revenue</span>
-            <div className="stat-card-icon green"><IndianRupee size={18} /></div>
           </div>
           <div className="stat-card-value">
             ₹{(stats.totalRevenue || 0).toLocaleString()}

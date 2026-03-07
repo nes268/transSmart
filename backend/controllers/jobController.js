@@ -114,6 +114,68 @@ exports.acceptJob = asyncHandler(async (req, res, next) => {
   });
 });
 
+/**
+ * Get Return Load Suggestions
+ * After completion: drop/delivery location → search for open jobs whose pickup is in that city or state.
+ * E.g. Delivered to "Bangalore, Karnataka" → find jobs from Bangalore, Mysore, Hubli, etc. (same city/state).
+ * Driver earns on return trip instead of empty backhaul.
+ */
+exports.getReturnLoads = asyncHandler(async (req, res, next) => {
+  const job = await Job.findById(req.params.jobId)
+    .populate("shipper", "name")
+    .lean();
+
+  if (!job) {
+    return next(new AppError("Job not found", 404));
+  }
+
+  // Drop location after completion
+  const deliveryLocation = (job.deliveryLocation || "").trim();
+  if (!deliveryLocation) {
+    return res.status(200).json({
+      success: true,
+      message: "No delivery location to match return loads",
+      data: [],
+      count: 0,
+    });
+  }
+
+  // Extract city and state from END of address - e.g. "... Electronic City, Bengaluru, Karnataka" → city: Bengaluru, state: Karnataka
+  const parts = deliveryLocation.split(",").map((p) => p.trim()).filter(Boolean);
+  const state = parts.length >= 1 ? parts[parts.length - 1] : "";
+  const city = parts.length >= 2 ? parts[parts.length - 2] : parts[0] || deliveryLocation;
+
+  const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const conditions = [];
+  if (city && city.length >= 2) {
+    conditions.push({ pickupLocation: new RegExp(escapeRegex(city), "i") });
+  }
+  if (state && state.length >= 2) {
+    conditions.push({ pickupLocation: new RegExp(escapeRegex(state), "i") });
+  }
+  if (conditions.length === 0) {
+    conditions.push({ pickupLocation: new RegExp(escapeRegex(deliveryLocation), "i") });
+  }
+
+  // Find open jobs where pickup is in same city OR same state as drop location
+  const returnLoads = await Job.find({
+    _id: { $ne: job._id },
+    status: "open",
+    $or: conditions,
+  })
+    .populate("shipper", "name email")
+    .sort({ createdAt: -1 })
+    .limit(10)
+    .lean();
+
+  res.status(200).json({
+    success: true,
+    count: returnLoads.length,
+    deliveryLocation,
+    data: returnLoads,
+  });
+});
+
 // Complete Job
 exports.completeJob = asyncHandler(async (req, res, next) => {
   const job = await Job.findById(req.params.id);

@@ -35,6 +35,8 @@ import AdminStats from "./pages/AdminStats";
 import JobDetails from "./pages/JobDetails";
 import TripDetails from "./pages/TripDetails";
 import PaymentHistory from "./pages/PaymentHistory";
+import Invoices from "./pages/Invoices";
+import InvoiceView from "./pages/InvoiceView";
 import Notifications from "./pages/Notifications";
 import Reviews from "./pages/Reviews";
 import UserReviews from "./pages/UserReviews";
@@ -108,6 +110,8 @@ function App() {
             <Route path="jobs/:id" element={<JobDetails />} />
             <Route path="trips/:id" element={<TripDetails />} />
             <Route path="payments" element={<PaymentHistory />} />
+            <Route path="invoices" element={<Invoices />} />
+            <Route path="invoices/:id" element={<InvoiceView />} />
             <Route path="notifications" element={<Notifications />} />
             <Route path="reviews" element={<Reviews />} />
             <Route path="reviews/user/:userId" element={<UserReviews />} />

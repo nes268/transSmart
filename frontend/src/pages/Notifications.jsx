@@ -1,10 +1,15 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { getMyNotifications, markNotificationRead } from "../services/notificationService";
+import { getTruckRequest } from "../services/truckRequestService";
+import { useAuth } from "../hooks/useAuth";
 import { formatDate } from "../utils/formatDate";
 import Loader from "../components/common/Loader";
 import { Bell, Check } from "lucide-react";
 
 export default function Notifications() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -28,6 +33,25 @@ export default function Notifications() {
     }
   };
 
+  const handleNotificationClick = async (n) => {
+    if (n.type === "truck_request" && n.relatedId && user?.role === "transporter") {
+      try {
+        const res = await getTruckRequest(n.relatedId);
+        const request = res?.data;
+        if (request?.job?._id) {
+          await handleMarkRead(n._id);
+          navigate(`/jobs/${request.job._id}?request=${n.relatedId}`);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    } else if (n.type === "job_accepted" && n.relatedId) {
+      navigate(`/trips/${n.relatedId}`);
+    } else if (n.type === "payment_done" && n.relatedId) {
+      navigate("/payments");
+    }
+  };
+
   if (loading) return <Loader />;
 
   return (
@@ -45,33 +69,45 @@ export default function Notifications() {
         </div>
       ) : (
         <div className="list-stack">
-          {notifications.map((n) => (
-            <div
-              key={n._id}
-              className="card card-hover"
-              style={{ opacity: n.isRead ? 0.7 : 1 }}
-            >
-              <div className="list-item">
-                <div>
-                  <div
-                    className="list-item-title"
-                    style={{ fontWeight: n.isRead ? 400 : 600 }}
-                  >
-                    {n.message}
+          {notifications.map((n) => {
+            const isClickable = (n.type === "truck_request" && user?.role === "transporter") ||
+              n.type === "job_accepted" || n.type === "payment_done";
+            return (
+              <div
+                key={n._id}
+                className={`card card-hover${isClickable ? " card-interactive" : ""}`}
+                style={{ opacity: n.isRead ? 0.7 : 1 }}
+                onClick={isClickable ? () => handleNotificationClick(n) : undefined}
+              >
+                <div className="list-item">
+                  <div>
+                    <div
+                      className="list-item-title"
+                      style={{ fontWeight: n.isRead ? 400 : 600 }}
+                    >
+                      {n.message}
+                    </div>
+                    <div className="list-item-meta">
+                      {formatDate(n.createdAt)}
+                      {isClickable && (
+                        <span style={{ marginLeft: "0.5rem", fontSize: "0.75rem", color: "var(--color-primary)" }}>
+                          View →
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="list-item-meta">{formatDate(n.createdAt)}</div>
+                  {!n.isRead && !isClickable && (
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={(e) => { e.stopPropagation(); handleMarkRead(n._id); }}
+                    >
+                      <Check size={14} /> Mark read
+                    </button>
+                  )}
                 </div>
-                {!n.isRead && (
-                  <button
-                    className="btn btn-secondary btn-sm"
-                    onClick={() => handleMarkRead(n._id)}
-                  >
-                    <Check size={14} /> Mark read
-                  </button>
-                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

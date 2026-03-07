@@ -32,9 +32,6 @@ export default function TransporterRequests() {
     <div className="animate-in">
       <div className="page-header">
         <h1 className="page-title">Truck Requests</h1>
-        <p className="page-subtitle">
-          Requests from shippers interested in your trucks
-        </p>
       </div>
 
       {requests.length === 0 ? (

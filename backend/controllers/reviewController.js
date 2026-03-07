@@ -28,15 +28,11 @@ exports.createReview = asyncHandler(async (req, res, next) => {
 
   let reviewee;
 
-  // Shipper rating Transporter
+  // Only shippers can write reviews (for transporters)
   if (shipperId && shipperId === userId) {
     reviewee = trip.transporter;
-  }
-  // Transporter rating Shipper
-  else if (transporterId && transporterId === userId) {
-    reviewee = trip.job.shipper;
   } else {
-    return next(new AppError("Not authorized to review this trip", 403));
+    return next(new AppError("Only shippers can write reviews", 403));
   }
 
   const existing = await Review.findOne({ trip: tripId, reviewer: req.user._id });

@@ -62,7 +62,6 @@ export default function BrowseTrucks() {
     <div className="animate-in">
       <div className="page-header">
         <h1 className="page-title">Browse Trucks</h1>
-        <p className="page-subtitle">View all available truck profiles</p>
         <div className="tab-group">
           <button
             className={`tab-btn${filter === "all" ? " active" : ""}`}

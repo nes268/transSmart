@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link, useSearchParams } from "react-router-dom";
 import { getAllJobs, acceptJob, completeJob } from "../services/jobService";
 import { getMyTrucks } from "../services/truckService";
-import { createTrip } from "../services/tripService";
+import { createTrip, getMyTrips } from "../services/tripService";
+import { getTruckRequest, acceptTruckRequest, rejectTruckRequest } from "../services/truckRequestService";
 import { useAuth } from "../hooks/useAuth";
 import { useSocket } from "../context/SocketContext";
 import { formatDate } from "../utils/formatDate";
@@ -12,6 +13,8 @@ import { ArrowLeft, MapPin, User, Star, CheckCircle2, Zap } from "lucide-react";
 
 export default function JobDetails() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const requestId = searchParams.get("request");
   const navigate = useNavigate();
   const { user } = useAuth();
   const socket = useSocket();
@@ -22,6 +25,8 @@ export default function JobDetails() {
   const [actionLoading, setActionLoading] = useState(false);
   const [selectedTruck, setSelectedTruck] = useState("");
   const [showAcceptModal, setShowAcceptModal] = useState(false);
+  const [truckRequest, setTruckRequest] = useState(null);
+  const [hasActiveTrip, setHasActiveTrip] = useState(false);
 
   useEffect(() => {
     getAllJobs()
@@ -34,12 +39,36 @@ export default function JobDetails() {
   }, [id]);
 
   useEffect(() => {
+    if (user?.role === "transporter") {
+      getMyTrips()
+        .then((res) => {
+          const list = Array.isArray(res?.data) ? res.data : [];
+          const active = list.some(
+            (t) => t.status === "accepted" || t.status === "in_transit" || t.status === "delivered"
+          );
+          setHasActiveTrip(active);
+        })
+        .catch(() => setHasActiveTrip(false));
+    }
+  }, [user?.role]);
+
+  useEffect(() => {
     if (user?.role === "transporter" && showAcceptModal) {
       getMyTrucks()
         .then((res) => setTrucks(res.data || []))
         .catch(() => setTrucks([]));
     }
   }, [user?.role, showAcceptModal]);
+
+  useEffect(() => {
+    if (requestId && user?.role === "transporter") {
+      getTruckRequest(requestId)
+        .then((res) => setTruckRequest(res?.data))
+        .catch(() => setTruckRequest(null));
+    } else {
+      setTruckRequest(null);
+    }
+  }, [requestId, user?.role]);
 
   useEffect(() => {
     if (!socket?.connected || !id) return;
@@ -76,6 +105,33 @@ export default function JobDetails() {
     }
   };
 
+  const handleAcceptTruckRequest = async () => {
+    if (!requestId) return;
+    setActionLoading(true);
+    try {
+      await acceptTruckRequest(requestId);
+      navigate("/transporter");
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to accept request");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRejectTruckRequest = async () => {
+    if (!requestId) return;
+    setActionLoading(true);
+    try {
+      await rejectTruckRequest(requestId);
+      setTruckRequest(null);
+      navigate("/transporter");
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to reject request");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleComplete = async () => {
     setActionLoading(true);
     try {
@@ -94,7 +150,8 @@ export default function JobDetails() {
 
   const isShipper = user?.role === "shipper";
   const isTransporter = user?.role === "transporter";
-  const canAccept = isTransporter && job.status === "open";
+  const canAccept = isTransporter && job.status === "open" && !truckRequest && !hasActiveTrip;
+  const hasPendingRequest = isTransporter && truckRequest?.status === "pending";
   const canComplete =
     isTransporter &&
     job.transporter?._id === user?._id &&
@@ -213,7 +270,57 @@ export default function JobDetails() {
           Created {formatDate(job.createdAt)}
         </div>
 
-        <div style={{ display: "flex", gap: "0.75rem", marginTop: "1.5rem" }}>
+        {hasPendingRequest && (
+          <div
+            style={{
+              marginTop: "1.5rem",
+              padding: "1rem",
+              background: "rgba(91, 143, 185, 0.1)",
+              borderRadius: "var(--radius)",
+              border: "1px solid var(--color-accent-light)",
+            }}
+          >
+            <p style={{ fontWeight: 600, marginBottom: "0.5rem" }}>
+              Truck request from {truckRequest.shipper?.name || "shipper"}
+            </p>
+            <p style={{ fontSize: "0.875rem", color: "var(--color-text-muted)", marginBottom: "1rem" }}>
+              {truckRequest.shipper?.name} requested your truck for this job. Accept to start the trip.
+            </p>
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <button
+                className="btn btn-primary"
+                onClick={handleAcceptTruckRequest}
+                disabled={actionLoading}
+              >
+                {actionLoading ? "Accepting..." : "Accept"}
+              </button>
+              <button
+                className="btn btn-secondary"
+                onClick={handleRejectTruckRequest}
+                disabled={actionLoading}
+              >
+                Reject
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: "0.75rem", marginTop: "1.5rem", flexWrap: "wrap", alignItems: "center" }}>
+          {hasActiveTrip && isTransporter && job.status === "open" && (
+            <div
+              style={{
+                padding: "0.75rem 1rem",
+                background: "rgba(245, 158, 11, 0.1)",
+                borderRadius: "var(--radius)",
+                border: "1px solid rgba(245, 158, 11, 0.3)",
+                fontSize: "0.875rem",
+                color: "var(--color-warning)",
+                fontWeight: 500,
+              }}
+            >
+              Job now is pending. Complete your current trip to accept new jobs.
+            </div>
+          )}
           {canAccept && (
             <button
               className="btn btn-primary"

@@ -1,15 +1,19 @@
 import { useState, useEffect } from "react";
 import { smartMatch, optimizeRoute } from "../services/aiService";
 import { getAllJobs } from "../services/jobService";
+import { createTruckRequest } from "../services/truckRequestService";
 import { useSocket } from "../context/SocketContext";
+import { useAuth } from "../hooks/useAuth";
 import Loader from "../components/common/Loader";
 import RouteMap from "../components/maps/RouteMap";
-import { Sparkles, MapPin, Zap } from "lucide-react";
+import { Sparkles, MapPin, Zap, Send } from "lucide-react";
 
 export default function AI() {
+  const { user } = useAuth();
   const socket = useSocket();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const isTransporter = user?.role === "transporter";
   const [activeTab, setActiveTab] = useState("match");
   const [matchJobId, setMatchJobId] = useState("");
   const [matchResult, setMatchResult] = useState(null);
@@ -22,6 +26,16 @@ export default function AI() {
   const [routeResult, setRouteResult] = useState(null);
   const [routeLoading, setRouteLoading] = useState(false);
   const [error, setError] = useState("");
+  const [requestModal, setRequestModal] = useState(null);
+  const [requestMessage, setRequestMessage] = useState("");
+  const [requestLoading, setRequestLoading] = useState(false);
+  const [requestError, setRequestError] = useState("");
+
+  useEffect(() => {
+    if (user?.role === "transporter" && activeTab === "match") {
+      setActiveTab("route");
+    }
+  }, [user?.role]);
 
   useEffect(() => {
     getAllJobs({ status: "open" })
@@ -73,6 +87,27 @@ export default function AI() {
     }
   };
 
+  const openRequestModal = (truck) => {
+    setRequestModal(truck);
+    setRequestMessage("");
+    setRequestError("");
+  };
+
+  const handleSendRequest = async (e) => {
+    e.preventDefault();
+    if (!requestModal || !matchJobId) return;
+    setRequestError("");
+    setRequestLoading(true);
+    try {
+      await createTruckRequest(requestModal._id, matchJobId, requestMessage);
+      setRequestModal(null);
+    } catch (err) {
+      setRequestError(err.response?.data?.message || "Failed to send request");
+    } finally {
+      setRequestLoading(false);
+    }
+  };
+
   const handleOptimizeRoute = async (e) => {
     e.preventDefault();
     if (!routeForm.jobId) return;
@@ -103,36 +138,40 @@ export default function AI() {
       <div className="page-header">
         <div>
           <h1 className="page-title">AI Tools</h1>
-          <p className="page-subtitle">Smart match and route optimization</p>
+          <p className="page-subtitle">
+            {isTransporter ? "Route optimization" : "Smart match and route optimization"}
+          </p>
         </div>
       </div>
 
-      <div className="tab-group" style={{ marginBottom: "1.5rem" }}>
-        <button
-          className={`tab-btn${activeTab === "match" ? " active" : ""}`}
-          onClick={() => {
-            setActiveTab("match");
-            setError("");
-            setMatchResult(null);
-          }}
-        >
-          <Sparkles size={14} /> Smart Match
-        </button>
-        <button
-          className={`tab-btn${activeTab === "route" ? " active" : ""}`}
-          onClick={() => {
-            setActiveTab("route");
-            setError("");
-            setRouteResult(null);
-          }}
-        >
-          <MapPin size={14} /> Optimize Route
-        </button>
-      </div>
+      {!isTransporter && (
+        <div className="tab-group" style={{ marginBottom: "1.5rem" }}>
+          <button
+            className={`tab-btn${activeTab === "match" ? " active" : ""}`}
+            onClick={() => {
+              setActiveTab("match");
+              setError("");
+              setMatchResult(null);
+            }}
+          >
+            <Sparkles size={14} /> Smart Match
+          </button>
+          <button
+            className={`tab-btn${activeTab === "route" ? " active" : ""}`}
+            onClick={() => {
+              setActiveTab("route");
+              setError("");
+              setRouteResult(null);
+            }}
+          >
+            <MapPin size={14} /> Optimize Route
+          </button>
+        </div>
+      )}
 
       {error && <div className="alert alert-error">{error}</div>}
 
-      {activeTab === "match" && (
+      {activeTab === "match" && !isTransporter && (
         <div className="card">
           <div className="section-header" style={{ marginBottom: "0.75rem" }}>
             <h2 className="section-title">Smart Match</h2>
@@ -179,74 +218,108 @@ export default function AI() {
             </button>
           </form>
           {matchResult && (
-            <div
-              style={{
-                marginTop: "1.5rem",
-                padding: "1rem",
-                background: "rgba(255,255,255,0.03)",
-                borderRadius: "var(--radius)",
-                border: "1px solid var(--color-border)",
-              }}
-            >
-              <h3 style={{ marginBottom: "0.5rem", fontSize: "0.875rem", fontWeight: 600 }}>Result</h3>
-              <p style={{ color: "var(--color-text-muted)", fontSize: "0.875rem", marginBottom: "1rem" }}>
-                {matchResult.message}
-              </p>
-              {matchResult.job && (
-                <div style={{ marginBottom: "1rem", padding: "0.75rem", background: "var(--color-surface)", borderRadius: "var(--radius-sm)" }}>
-                  <div style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", marginBottom: "0.25rem" }}>Job</div>
-                  <div style={{ fontWeight: 600 }}>{matchResult.job.title}</div>
-                  <div style={{ fontSize: "0.875rem" }}>{matchResult.job.pickupLocation} → {matchResult.job.deliveryLocation}</div>
-                  {matchResult.job.requiredCapacity > 0 && (
-                    <div style={{ fontSize: "0.8125rem", color: "var(--color-text-muted)" }}>Required capacity: {matchResult.job.requiredCapacity} tons</div>
-                  )}
-                </div>
-              )}
+            <div style={{ marginTop: "1.5rem" }}>
               {matchResult.suggestions && matchResult.suggestions.length > 0 ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                  <div style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>
-                    Top matches ({matchResult.suggestions.length}) · Scanned {matchResult.totalScanned ?? 0} trucks
-                  </div>
-                  {matchResult.suggestions.map((s, i) => (
-                    <div
-                      key={s.truck?._id || i}
-                      style={{
-                        padding: "0.75rem",
-                        background: "var(--color-surface)",
-                        borderRadius: "var(--radius-sm)",
-                        border: "1px solid var(--color-border)",
-                      }}
-                    >
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "0.5rem" }}>
-                        <div>
-                          <span style={{ fontWeight: 600 }}>{s.truck?.truckNumber ?? "Truck"}</span>
-                          <span style={{ marginLeft: "0.5rem", fontSize: "0.8125rem", color: "var(--color-text-muted)" }}>
-                            {s.truck?.capacity} tons · {s.truck?.fuelType ?? "-"} · {s.truck?.availability ?? "-"}
+                <>
+                  <p style={{ fontSize: "0.8125rem", color: "var(--color-text-muted)", marginBottom: "1rem" }}>
+                    {matchResult.suggestions.length} match(es) · Scanned {matchResult.totalScanned ?? 0} trucks
+                  </p>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                      gap: "1rem",
+                    }}
+                  >
+                    {matchResult.suggestions.map((s, i) => (
+                      <div
+                        key={s.truck?._id || i}
+                        className="card card-hover"
+                        style={{ padding: "1rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.25rem" }}>
+                          <span style={{ fontWeight: 600, fontSize: "1rem" }}>{s.truck?.truckNumber ?? "Truck"}</span>
+                          <span style={{ fontWeight: 600, color: "var(--color-accent)", fontSize: "0.875rem" }}>
+                            Score {s.score}
                           </span>
-                          {s.truck?.transporter && (
-                            <div style={{ fontSize: "0.8125rem", marginTop: "0.25rem", color: "var(--color-text-secondary)" }}>
-                              {s.truck.transporter.name}
-                              {s.truck.transporter.phone && ` · ${s.truck.transporter.phone}`}
-                            </div>
-                          )}
                         </div>
-                        <span style={{ fontWeight: 600, color: "var(--color-accent)" }}>Score: {s.score}</span>
+                        <div style={{ fontSize: "0.8125rem", color: "var(--color-text-muted)", marginBottom: "0.25rem" }}>
+                          {s.truck?.capacity} tons · {(s.truck?.fuelType ?? "-").charAt(0).toUpperCase() + (s.truck?.fuelType?.slice(1) || "")} · {s.truck?.availability ?? "-"}
+                        </div>
+                        {s.truck?.transporter && (
+                          <div style={{ fontSize: "0.8125rem", color: "var(--color-text-secondary)" }}>
+                            {s.truck.transporter.name}
+                            {s.truck.transporter.phone && ` · ${s.truck.transporter.phone}`}
+                          </div>
+                        )}
+                        {s.reasons && s.reasons.length > 0 && (
+                          <div style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", borderTop: "1px solid var(--color-border)", paddingTop: "0.5rem", marginTop: "0.25rem" }}>
+                            {s.reasons.join(" · ")}
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-sm"
+                          style={{ marginTop: "auto" }}
+                          onClick={() => s.truck && openRequestModal(s.truck)}
+                        >
+                          <Send size={14} /> Send Request
+                        </button>
                       </div>
-                      {s.reasons && s.reasons.length > 0 && (
-                        <div style={{ marginTop: "0.5rem", fontSize: "0.8125rem", color: "var(--color-text-muted)" }}>
-                          {s.reasons.join(" · ")}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                </>
               ) : (
-                <div style={{ fontSize: "0.875rem", color: "var(--color-text-muted)" }}>
+                <div style={{ padding: "1rem", background: "rgba(255,255,255,0.03)", borderRadius: "var(--radius)", border: "1px solid var(--color-border)", fontSize: "0.875rem", color: "var(--color-text-muted)" }}>
                   No suitable trucks found. Try lowering required capacity or add more trucks.
                 </div>
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {requestModal && activeTab === "match" && (
+        <div className="modal-overlay" onClick={() => setRequestModal(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title">Send Request</h3>
+            <p style={{ color: "var(--color-text-muted)", marginBottom: "1rem", fontSize: "0.875rem" }}>
+              Request truck <strong>{requestModal.truckNumber}</strong>
+              {requestModal.transporter?.name && <> from {requestModal.transporter.name}</>}
+            </p>
+            <p style={{ fontSize: "0.8125rem", color: "var(--color-text-muted)", marginBottom: "1rem" }}>
+              Job: {jobs.find((j) => j._id === matchJobId)?.title || "Selected job"}
+            </p>
+            {requestError && <div className="alert alert-error">{requestError}</div>}
+            <form onSubmit={handleSendRequest}>
+              <div className="form-group">
+                <label>Message (optional)</label>
+                <textarea
+                  value={requestMessage}
+                  onChange={(e) => setRequestMessage(e.target.value)}
+                  placeholder="Add a note for the transporter..."
+                  rows={3}
+                  style={{ resize: "vertical" }}
+                />
+              </div>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={requestLoading}
+                >
+                  {requestLoading ? "Sending..." : "Send Request"}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setRequestModal(null)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
