@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import LoadingWizard from "../components/common/LoadingWizard";
 
 const fadeUp = {
   initial: { opacity: 0, y: 20 },
@@ -35,6 +37,7 @@ const stagger = {
 
 export default function Home() {
   const { user, loading } = useAuth();
+  const [showWizard, setShowWizard] = useState(true);
 
   if (loading) return null;
 
@@ -51,7 +54,18 @@ export default function Home() {
   }
 
   return (
-    <div className="landing-page">
+    <>
+      <AnimatePresence mode="wait">
+        {showWizard ? (
+          <LoadingWizard key="wizard" onComplete={() => setShowWizard(false)} />
+        ) : (
+          <motion.div
+            key="landing"
+            className="landing-page"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          >
       <motion.div
         className="landing-hero"
         initial="initial"
@@ -142,6 +156,9 @@ export default function Home() {
           </motion.div>
         ))}
       </motion.div>
-    </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
