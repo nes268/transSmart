@@ -9,7 +9,7 @@ TransSmart uses **AI-powered truck matching, route optimization, and real-time t
 # Demo & Documentation
 
 - **Demo Video:** https://www.youtube.com/watch?v=ComG5VYCjaM
-- **Project Documentation:** https://drive.google.com/file/d/1AIPxEqYLkwDbLMMyXKKsSLRZA3LNAbMb/view?usp=sharing
+- **Project Documentation:** https://drive.google.com/file/d/11lTMKha-y_Bwyh_GRIktEcmWn4tTKkvV/view?usp=sharing
 
 ---
 
