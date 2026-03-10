@@ -1,5 +1,13 @@
 # TransSmart – Smarter Routes. Better Logistics
 
+**AI-Powered Freight & Logistics Management Platform**
+
+Built with React • Node.js • Groq AI • OSRM • Socket.IO • MongoDB
+
+[Key Features](#key-features) • [Tech Stack](#tech-stack) • [Installation](#setup-and-run-instructions) • [Demo & Docs](#demo--documentation)
+
+---
+
 A smart logistics platform that connects **shippers with transporters** for efficient cargo delivery.
 
 TransSmart uses **AI-powered truck matching, route optimization, and real-time tracking** to streamline freight operations and reduce logistics inefficiencies.
