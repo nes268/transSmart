@@ -1,81 +1,133 @@
-# TransSmart
+# TransSmart – Smarter Routes. Better Logistics
 
-A smart logistics platform that connects **shippers** with **transporters** for efficient cargo delivery.  
-TransSmart uses **AI-powered truck matching, route optimization, and real-time tracking** to streamline freight operations.
+A smart logistics platform that connects **shippers with transporters** for efficient cargo delivery.
+
+TransSmart uses **AI-powered truck matching, route optimization, and real-time tracking** to streamline freight operations and reduce logistics inefficiencies.
 
 ---
 
-## Project Overview
+# Demo & Documentation
+
+- **Demo Video:** https://www.youtube.com/watch?v=ComG5VYCjaM
+- **Project Documentation:** https://drive.google.com/file/d/1AIPxEqYLkwDbLMMyXKKsSLRZA3LNAbMb/view?usp=sharing
+
+---
+
+# Project Overview
 
 TransSmart simplifies freight booking by allowing **shippers to post delivery jobs** and **transporters to browse and accept them**.
 
-The platform integrates:
+The platform integrates modern technologies to automate logistics workflows.
 
-- **Groq AI** for intelligent truck matching and route optimization  
-- **OSRM / OpenStreetMap** for routing and geolocation  
-- **Socket.IO** for real-time tracking and communication  
+Core integrations include:
 
-The system provides a **transparent workflow from job creation to payment completion**.
+- **Groq AI** for intelligent truck matching and route optimization
+- **OSRM / OpenStreetMap** for routing and geolocation
+- **Socket.IO** for real-time tracking and communication
+
+This creates a **transparent workflow from job creation to payment completion**.
 
 ---
 
-## Key Features
+# Key Features
 
 ### Smart Match
+
 AI ranks available trucks based on:
+
 - Capacity
 - Availability
 - Fuel type
 - Eco-friendliness
 
+This helps shippers quickly find the most suitable transporter.
+
+---
+
 ### Route Optimization
-Multiple route options are generated using **OSRM**, and AI selects the best route based on:
+
+Multiple routes are generated using **OSRM** and evaluated by AI.
+
+Routes are ranked based on:
+
 - Fastest route
 - Cheapest route
 - Eco-friendly route
 
+This reduces travel time, fuel usage, and operational costs.
+
+---
+
 ### Real-Time Chatbot
-- Multilingual support
-- Responds in the user's language
-- Helps both shippers and transporters
+
+- Multilingual communication
+- Responds in the user's preferred language
+- Assists both shippers and transporters with logistics queries
+
+---
 
 ### Live Trip Tracking
+
 - Real-time location updates using **Socket.IO**
 - Interactive map visualization
+- Continuous delivery monitoring
+
+---
 
 ### Job Lifecycle
-Complete workflow management:
-Create Job → Transporter Request → Accept → Trip Start → Delivery → Payment
+
+The entire delivery process is managed within the platform:
+
+**Create Job → Transporter Request → Accept → Trip Start → Delivery → Payment**
+
+---
 
 ### Role-Based Access
+
 Separate dashboards for:
+
 - Shippers
 - Transporters
 - Admin
 
+Each role has customized features and permissions.
+
+---
+
 ### Payments
+
 Supports multiple payment options:
+
 - UPI
 - Card
 - Net Banking
 - Cash
 
+Invoices and payment history are automatically maintained.
+
+---
+
 ### Reviews & Ratings
-Shippers can rate transporters after job completion.
+
+Shippers can rate transporters after job completion, helping maintain **trust and service quality** within the platform.
+
+---
 
 ### Analytics
-Dashboard insights including:
+
+Dashboard insights include:
+
 - Job statistics
-- Platform usage
+- Platform usage metrics
 - Estimated carbon footprint
 
 ---
 
-## Problem Statement
+# Problem Statement
 
 Freight logistics is often **manual, slow, and inefficient**.
 
-Common challenges include:
+Common industry challenges include:
 
 - Difficulty finding suitable transporters
 - Lack of transparency in job status
@@ -83,23 +135,25 @@ Common challenges include:
 - Inefficient vehicle utilization
 - Limited visibility into logistics operations
 
-These issues lead to **higher costs, delays, and unnecessary carbon emissions**.
+These issues result in **higher operational costs, delivery delays, and increased carbon emissions**.
 
 ---
 
-## Solution
+# Solution
 
-TransSmart solves these problems by providing a **centralized digital logistics platform**.
+TransSmart addresses these problems with a **centralized AI-powered logistics platform**.
 
-- **AI Smart Matching** – Automatically recommends the best trucks for each job.
-- **Route Optimization** – Reduces fuel usage, delivery time, and operational costs.
-- **Real-Time Communication** – Chat system allows instant interaction between users.
-- **Transparent Workflow** – Every stage of the delivery process is visible to both parties.
-- **Unified Platform** – Manages jobs, trucks, trips, payments, and reviews in one system.
+Key capabilities include:
+
+- **AI Smart Matching** — Automatically recommends the best trucks for each job.
+- **Route Optimization** — Reduces fuel usage, delivery time, and operational costs.
+- **Real-Time Communication** — Chat and notifications enable instant interaction.
+- **Transparent Workflow** — Every stage of delivery is visible to both parties.
+- **Unified Platform** — Jobs, trucks, trips, payments, and reviews are managed in one system.
 
 ---
 
-## Tech Stack
+# Tech Stack
 
 | Layer | Technologies |
 |-------|--------------|
@@ -107,63 +161,70 @@ TransSmart solves these problems by providing a **centralized digital logistics 
 | Frontend | React 18, Vite 6, React Router, Axios |
 | Database | MongoDB |
 | AI | Groq API (llama-3.3-70b-versatile) |
-| Maps & Routing | OSRM, Nominatim (OpenStreetMap), Leaflet, React-Leaflet |
+| Maps & Routing | OSRM, Nominatim, Leaflet, React-Leaflet |
 | Authentication | JWT, bcryptjs |
 | Real-time Communication | Socket.IO |
 | UI | Framer Motion, Lucide React, CSS |
 
 ---
 
-## APIs and Services
+# APIs and Services
 
 ### Groq API
+
 Used for:
+
 - Smart truck matching
 - Route optimization
 - Multilingual chatbot responses
 
 ### OSRM
+
 Provides:
+
 - Road routing
 - Route alternatives
 
 ### Nominatim
+
 Used for:
+
 - Address geocoding
 - Converting addresses into coordinates
 
 ### Mapbox (Optional)
-Used for enhanced map styling.
+
+Used for enhanced map styling and visualization.
 
 ---
 
-## Setup and Run Instructions
+# Setup and Run Instructions
 
-### Prerequisites
-
-Make sure the following are installed:
+## Prerequisites
 
 - Node.js (v18 or higher)
 - MongoDB (local or MongoDB Atlas)
 - Groq API Key
 
-### 1. Clone the Repository
+---
+
+## 1. Clone the Repository
 
 ```bash
 git clone https://github.com/nes268/transSmart.git
 cd transSmart
 ```
 
-### 2. Backend Setup
+## 2. Backend Setup
 
 ```bash
 cd backend
 npm install
 ```
 
-Create a `.env` file in the backend folder:
+Create `.env` file:
 
-```env
+```
 PORT=5000
 MONGO_URI=mongodb://localhost:27017/transsmart
 JWT_SECRET=your_jwt_secret
@@ -171,15 +232,15 @@ GROQ_API_KEY=your_groq_api_key
 GROQ_MODEL=llama-3.3-70b-versatile
 ```
 
-Start the backend server:
+Start backend:
 
 ```bash
 npm run dev
 ```
 
-Backend runs at `http://localhost:5000`.
+Backend runs at: **http://localhost:5000**
 
-### 3. Frontend Setup
+## 3. Frontend Setup
 
 Open another terminal:
 
@@ -188,40 +249,56 @@ cd frontend
 npm install
 ```
 
-Create an optional `.env` file:
+Optional `.env` file:
 
-```env
+```
 VITE_MAPBOX_TOKEN=your_mapbox_token
 VITE_SOCKET_URL=http://localhost:5000
 ```
 
-Start the frontend:
+Start frontend:
 
 ```bash
 npm run dev
 ```
 
-Frontend runs at `http://localhost:5173`.
+Frontend runs at: **http://localhost:5173**
 
-### 4. Run the Application
+## 4. Run the Application
 
 1. Ensure MongoDB is running.
 2. Start both servers:
-   - **Backend:** `cd backend && npm run dev`
-   - **Frontend:** `cd frontend && npm run dev`
-3. Open in browser: `http://localhost:5173`
 
-### 5. Create Accounts
+**Backend:**
+```bash
+cd backend && npm run dev
+```
 
-- Register as **Shipper** or **Transporter**
-- **Shippers** create logistics jobs
-- **Transporters** add trucks and browse jobs
-- Use **Smart Match** and **Route Optimization**
-- Chat using the real-time chatbot
+**Frontend:**
+```bash
+cd frontend && npm run dev
+```
+
+3. Open in browser: **http://localhost:5173**
+
+## 5. Create Accounts
+
+Register as:
+
+- **Shipper**
+- **Transporter**
+
+**Workflow:**
+
+1. Shippers create logistics jobs
+2. Transporters add trucks and browse jobs
+3. Use Smart Match and Route Optimization
+4. Communicate using chatbot
+5. Track deliveries in real time
 
 ---
 
-## Project Structure
+# Project Structure
 
 ```
 transSmart/
@@ -233,6 +310,7 @@ transSmart/
 │   ├── realtime/
 │   ├── routes/
 │   └── utils/
+│
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
@@ -241,26 +319,27 @@ transSmart/
 │   │   ├── pages/
 │   │   └── services/
 │   └── public/
+│
 ├── docs/
 └── .env.example
 ```
 
 ---
 
-## Environment Variables
+# Environment Variables
 
 | Variable | Location | Description |
 |----------|----------|-------------|
-| `PORT` | Backend | Server port |
-| `MONGO_URI` | Backend | MongoDB connection string |
-| `JWT_SECRET` | Backend | Secret key for JWT |
-| `GROQ_API_KEY` | Backend | API key for AI features |
-| `GROQ_MODEL` | Backend | Groq model used |
-| `VITE_MAPBOX_TOKEN` | Frontend | Optional Mapbox token |
-| `VITE_SOCKET_URL` | Frontend | Backend URL for Socket.IO |
+| PORT | Backend | Server port |
+| MONGO_URI | Backend | MongoDB connection string |
+| JWT_SECRET | Backend | Secret key for authentication |
+| GROQ_API_KEY | Backend | API key for AI features |
+| GROQ_MODEL | Backend | Groq AI model |
+| VITE_MAPBOX_TOKEN | Frontend | Optional map token |
+| VITE_SOCKET_URL | Frontend | Backend URL for Socket.IO |
 
 ---
 
-## License
+# License
 
 ISC License
